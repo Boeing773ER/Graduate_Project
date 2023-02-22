@@ -29,6 +29,7 @@ days = 335
 T = [i for i in range(0, days)]
 Y = calc_SEIR(N, T, S, E, I, R, r, b, a, r2, b2, y)
 
+
 # 设置图框的大小
 fig = plt.figure(figsize=(30, 18))
 # 绘图
