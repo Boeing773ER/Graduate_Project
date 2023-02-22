@@ -12,7 +12,8 @@ plt.style.use("ggplot")
 plt.rcParams["font.sans-serif"] = "KaiTi"
 plt.rcParams["axes.unicode_minus"] = False
 
-sub_data = data_file.loc[data_file.date > '2022/3/15', :]
+sub_data = data_file.loc[data_file.date > '2022-03-15', :]
+sub_data = sub_data.loc[sub_data.date < '2022-06-01', :]
 
 total_count = 0
 total_confirmed_case = []
@@ -35,7 +36,7 @@ for index, row in data_file.iterrows():
 
 
 # # 设置图框的大小
-fig = plt.figure(figsize=(10, 6))
+fig = plt.figure(figsize=(15, 9))
 # fig = plt.figure()
 # plt.title("SEIR-nCoV 传播时间曲线")
 # plt.plot(date, total_confirmed_case, color='r', label='总感染人数')
