@@ -1,6 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-from SEIR_model import seir_graph
+from Classic_SEIR_model import seir_graph
 import discrete_stochastic_model
 
 file_path = "./CN_COVID_data/shanxi_data.csv"
