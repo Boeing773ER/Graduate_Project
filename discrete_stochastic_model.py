@@ -25,12 +25,13 @@ h = 1
 
 S = [99895]
 E = [0]
-I = [0]
+I = [1]
 B = [0]
 S_q = [0]
 H = [0]
 R = [0]
-
+# we define N as the initial amount of S
+N = S[0]
 
 def contact_rate(t):
     return (c_0 - c_b) * exp(-gamma_1 * t) + c_b
@@ -44,11 +45,11 @@ def re_delta_i(t):
     return ((1 / delta_I0) - (1 / delta_If)) * exp(-gamma_3 * t) + (1 / delta_If)
 
 
-P11 = list()
-P12 = list()
+P11 = []
+P12 = []
 P13 = 1 - exp(-m * h)
 P21 = 1 - exp(-sigma * h)
-P31 = list()
+P31 = []
 P32 = 1 - exp(-alpha * h)
 P33 = 1 - exp(-gamma_I * h)
 P41 = 1 - exp(-b * h)
@@ -59,9 +60,12 @@ P61 = 1 - exp(-gamma_H * h)
 def calc(T):
     for i in range(0, len(T) - 1):
         # TODO:figure out factor I/N in P11&P12
+        # I[i] = 0导致P11, P12 === 0
         P11.append(1 - exp(-beta * contact_rate(i) * I[i] / N * h))
         P12.append(1 - exp(-contact_rate(i) * quarantine_rate(i) * (1 - beta) * I[i] / N * h))
         P31.append(1 - exp(-1 / re_delta_i(i)) * h)
+
+        print(contact_rate(i), quarantine_rate(i), 1 / re_delta_i(i))
 
         D11 = binomial(S[i], P11[i])
         D12 = binomial(S[i], P12[i])
@@ -74,14 +78,16 @@ def calc(T):
         D51 = binomial(S_q[i], P51)
         D61 = binomial(H[i], P61)
         D62 = binomial(H[i], P32)
+        # print(D11, D12, D13, D21, D31, D32, D33, D41, D51, D61, D62)
 
         # Removed the imported case in this model
-        S.append(S[i] - D11[i] - D12[i] - D13[i] + D51[i] + (1 - f) * D41[i])
-        E.append(E[i] + (1 - quarantine_rate(i)) * D11[i] - D21[i])
+        S.append(S[i] - D11 - D12 - D13 + D51 + (1 - f) * D41)
+        E.append(E[i] + (1 - quarantine_rate(i)) * D11 - D21)
         I.append(I[i] + D21 - D31 - D32 - D33)
         B.append(B[i] + quarantine_rate(i) * D11 + D13 - D41)
         S_q.append(S_q[i] + D12 - D51)
         H.append(H[i] + D31 + f * D41 - D61 - D62)
         R.append(R[i] + D33 + D61)
-    Y = [S, E, I, R]
-    return Y
+
+    print(P11, P12, P31)
+    return {'S': S, 'E': E, 'I': I, 'B': B, 'S_q': S_q, 'H': H, 'R': R}
