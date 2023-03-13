@@ -2,20 +2,31 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from Classic_SEIR_model import seir_graph
 import discrete_stochastic_model
+import SEAIR_model
+
+
+def get_file(file_path):
+    data_file = pd.read_csv(file_path)
+    # 取出指定日期范围数据
+    sub_data = data_file.loc[data_file.date >= '2022/10/01', :]
+    # sub_data = data_file
+    return sub_data
+
+
+def config_graph():
+    plt.style.use("ggplot")
+    # 设置中文编码和符号的正常显示
+    plt.rcParams["font.sans-serif"] = "KaiTi"
+    plt.rcParams["axes.unicode_minus"] = False
+    # 设置图框的大小
+    fig = plt.figure(figsize=(30, 18))
+    return fig
+
 
 file_path = "./CN_COVID_data/shanxi_data.csv"
-data_file = pd.read_csv(file_path)
+sub_data = get_file(file_path)
 
-plt.style.use("ggplot")
-# 设置中文编码和符号的正常显示
-plt.rcParams["font.sans-serif"] = "KaiTi"
-plt.rcParams["axes.unicode_minus"] = False
-# 取出指定日期范围数据
-sub_data = data_file.loc[data_file.date >= '2022/10/01', :]
-# sub_data = data_file
-
-# 设置图框的大小
-fig = plt.figure(figsize=(30, 18))
+fig = config_graph()
 # new cases
 plt.plot(sub_data.date,  # x轴数据
          sub_data.p_conf,  # y轴数据
@@ -66,7 +77,7 @@ print("Susceptible", result['S'])
 
 
 # 添加标题和坐标轴标签
-plt.title('香港新冠感染总数图')
+plt.title('新冠感染总数图')
 plt.xlabel('日期')
 plt.ylabel('感染总人数')
 

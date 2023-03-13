@@ -9,9 +9,6 @@ dA_q/dt = alpha * (1 - eta) * E_q + mu * A - gamma_Aq * A_q
 dR_1/dt = gamma_Iq(t) * I_q + chi * gamma_Aq * A_q
 dR_2/dt = gamma_A * A + gamma_I * I + (1 - chi) * gamma_Aq * Aq
 """
-import numpy as np
-from scipy.integrate import odeint
-import matplotlib.pyplot as plt
 
 """
 ρ rho       被隔离的易感者的比例 0.1 ∼ 0.95 Yes
@@ -41,6 +38,9 @@ dR_2/dt = gamma_A * A + gamma_I * I + (1 - chi) * gamma_Aq * A_q
 
 gamma_Iq(t) = z_1 + z_2 * tanh((t - a)/b)
 """
+import numpy as np
+from scipy.integrate import odeint
+import matplotlib.pyplot as plt
 
 
 def model(y, t, rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_Iq, gamma_A, gamma_Aq, eta, mu, chi, N_e):
