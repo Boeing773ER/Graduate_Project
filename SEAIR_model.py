@@ -9,7 +9,11 @@ dA_q/dt = alpha * (1 - eta) * E_q + mu * A - gamma_Aq * A_q
 dR_1/dt = gamma_Iq(t) * I_q + chi * gamma_Aq * A_q
 dR_2/dt = gamma_A * A + gamma_I * I + (1 - chi) * gamma_Aq * Aq
 """
-
+import scipy.optimize
+import numpy as np
+import pandas as pd
+from scipy.integrate import odeint
+import matplotlib.pyplot as plt
 """
 ρ rho       被隔离的易感者的比例 0.1 ∼ 0.95 Yes
 ϕ phi       传染性个体通过接触传播的概率 10^−6 ∼ 10^−3 Yes
@@ -38,10 +42,12 @@ dR_2/dt = gamma_A * A + gamma_I * I + (1 - chi) * gamma_Aq * A_q
 
 gamma_Iq(t) = z_1 + z_2 * tanh((t - a)/b)
 """
-import numpy as np
-from scipy.integrate import odeint
-import matplotlib.pyplot as plt
 
+file_path = "./CN_COVID_data/domestic_recent_provinces.csv"
+data_file = pd.read_csv(file_path)
+sub_data = data_file.loc[data_file.province == "上海", :]
+xdata = sub_data["confirm_add"]
+ydata = sub_data["date"]
 
 def model(y, t, rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_Iq, gamma_A, gamma_Aq, eta, mu, chi, N_e):
     E, E_q, I, I_q, A, A_q, R_1, R_2 = y
@@ -62,7 +68,7 @@ def model(y, t, rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_Iq, gamma_
 
 y0 = [0, 0, 1, 0, 0, 0, 0, 0]
 days = 20
-t = np.linspace(0, days, days+1)
+t = np.linspace(0, days, days + 1)
 
 rho = 0.525
 phi = 1e-4
@@ -79,14 +85,18 @@ mu = 0.5
 chi = 0
 N_e = 1e7
 
-sol = odeint(model, y0, t, args=(rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_Iq, gamma_A, gamma_Aq, eta, mu, chi, N_e))
+sol = odeint(model, y0, t,
+             args=(rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_Iq, gamma_A, gamma_Aq, eta, mu, chi, N_e))
+
+popt, pcov = scipy.optimize.curve_fit(model, xdata, ydata)
+print(popt)
 
 plt.plot(t, sol[:, 0], 'b', label='Exposed')
 plt.plot(t, sol[:, 2], 'g', label='Infected')
 plt.legend(loc='best')
 plt.xlabel('t')
 plt.grid()
-plt.show()
+# plt.show()
 
 """
 # 自定义函数，curve_fit支持自定义函数的形式进行拟合，这里定义的是指数函数的形式
@@ -126,4 +136,3 @@ plt.ylabel('y')
 plt.legend()
 plt.show()
 """
-
