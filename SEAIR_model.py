@@ -43,14 +43,23 @@ dR_2/dt = gamma_A * A + gamma_I * I + (1 - chi) * gamma_Aq * A_q
 gamma_Iq(t) = z_1 + z_2 * tanh((t - a)/b)
 """
 
-file_path = "./CN_COVID_data/domestic_recent_provinces.csv"
+file_path = "./CN_COVID_data/domestic_data.csv"
 data_file = pd.read_csv(file_path)
 sub_data = data_file.loc[data_file.province == "上海", :]
 xdata = sub_data["confirm_add"]
-ydata = sub_data["date"]
+# ydata = sub_data["date"]
+ydata = np.linspace(0, 20, 21)
+
 
 def model(y, t, rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_Iq, gamma_A, gamma_Aq, eta, mu, chi, N_e):
-    E, E_q, I, I_q, A, A_q, R_1, R_2 = y
+    E = y[0]
+    E_q = y[1]
+    I = y[2]
+    I_q = y[3]
+    A = y[4]
+    A_q = y[5]
+    R_1 = y[6]
+    R_2 = y[7]
     # rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_Iq, gamma_A, gamma_Aq, eta, mu, chi, N_e = u
 
     # used a fixed arg for gamma_Iq(t)
@@ -66,29 +75,40 @@ def model(y, t, rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_Iq, gamma_
     return [dE, dE_q, dI, dI_q, dA, dA_q, dR_1, dR_2]
 
 
+def model_infected(y, t, E, alpha, eta, theta, gamma_I):
+    I = y
+
+    dI = alpha * eta * E - theta * I - gamma_I * I
+
+    return dI
+
+
 y0 = [0, 0, 1, 0, 0, 0, 0, 0]
 days = 20
 t = np.linspace(0, days, days + 1)
 
-rho = 0.525
-phi = 1e-4
+rho = 0.85
+phi = 3.696e-5
 epsilon = 0.5
-beta = 0.5
-alpha = 0.55
-theta = 0.525
-gamma_I = 0.5
+beta = 0.4
+alpha = 0.2
+theta = 0.75
+gamma_I = 7e-4
 gamma_Iq = 0.5
-gamma_A = 0.5
-gamma_Aq = 0.5
-eta = 0.575
-mu = 0.5
+gamma_A = 1e-4
+gamma_Aq = 0.03
+eta = 0.75
+mu = 0.2
 chi = 0
 N_e = 1e7
 
 sol = odeint(model, y0, t,
              args=(rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_Iq, gamma_A, gamma_Aq, eta, mu, chi, N_e))
 
-popt, pcov = scipy.optimize.curve_fit(model, xdata, ydata)
+sol = odeint(model_infected, 1, t, args=(E, alpha, eta, theta, gamma_I))
+
+# popt, pcov = scipy.optimize.curve_fit(model, xdata, ydata)
+popt, pcov = scipy.optimize.curve_fit(model_infected, xdata, ydata)
 print(popt)
 
 plt.plot(t, sol[:, 0], 'b', label='Exposed')
@@ -96,7 +116,7 @@ plt.plot(t, sol[:, 2], 'g', label='Infected')
 plt.legend(loc='best')
 plt.xlabel('t')
 plt.grid()
-# plt.show()
+plt.show()
 
 """
 # 自定义函数，curve_fit支持自定义函数的形式进行拟合，这里定义的是指数函数的形式
