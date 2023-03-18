@@ -105,11 +105,11 @@ N_e = 1e7
 sol = odeint(model, y0, t,
              args=(rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_Iq, gamma_A, gamma_Aq, eta, mu, chi, N_e))
 
-sol = odeint(model_infected, 1, t, args=(E, alpha, eta, theta, gamma_I))
+# sol = odeint(model_infected, 1, t, args=(E, alpha, eta, theta, gamma_I))
 
 # popt, pcov = scipy.optimize.curve_fit(model, xdata, ydata)
-popt, pcov = scipy.optimize.curve_fit(model_infected, xdata, ydata)
-print(popt)
+# popt, pcov = scipy.optimize.curve_fit(model_infected, xdata, ydata)
+# print(popt)
 
 plt.plot(t, sol[:, 0], 'b', label='Exposed')
 plt.plot(t, sol[:, 2], 'g', label='Infected')
