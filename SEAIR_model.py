@@ -9,11 +9,13 @@ dA_q/dt = alpha * (1 - eta) * E_q + mu * A - gamma_Aq * A_q
 dR_1/dt = gamma_Iq(t) * I_q + chi * gamma_Aq * A_q
 dR_2/dt = gamma_A * A + gamma_I * I + (1 - chi) * gamma_Aq * Aq
 """
+import math
 import scipy.optimize
 import numpy as np
 import pandas as pd
 from scipy.integrate import odeint
 import matplotlib.pyplot as plt
+
 """
 ρ rho       被隔离的易感者的比例 0.1 ∼ 0.95 Yes
 ϕ phi       传染性个体通过接触传播的概率 10^−6 ∼ 10^−3 Yes
@@ -45,24 +47,29 @@ gamma_Iq(t) = z_1 + z_2 * tanh((t - a)/b)
 
 file_path = "./CN_COVID_data/domestic_data.csv"
 data_file = pd.read_csv(file_path)
-sub_data = data_file.loc[data_file.province == "上海", :]
-xdata = sub_data["confirm_add"]
-# ydata = sub_data["date"]
-ydata = np.linspace(0, 20, 21)
+sub_data = data_file.loc[data_file.province == "湖北", :]
+sub_data = sub_data.loc["2020-02-10" > sub_data.date, :]
+ydata = pd.DataFrame()
+ydata["now_confirm"] = sub_data["now_confirm"]
+ydata["heal"] = sub_data["heal"]
+ydata["now_asy"] = sub_data["now_asy"]
+print(type(ydata))
 
 
-def model(y, t, rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_Iq, gamma_A, gamma_Aq, eta, mu, chi, N_e):
-    E = y[0]
-    E_q = y[1]
-    I = y[2]
-    I_q = y[3]
-    A = y[4]
-    A_q = y[5]
-    R_1 = y[6]
-    R_2 = y[7]
+def model(y, t, rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_A, gamma_Aq, eta, mu, chi, N_e, z_1, z_2, a, b):
+    E, E_q, I, I_q, A, A_q, R_1, R_2 = y
+    # E = y[0]
+    # E_q = y[1]
+    # I = y[2]
+    # I_q = y[3]
+    # A = y[4]
+    # A_q = y[5]
+    # R_1 = y[6]
+    # R_2 = y[7]
     # rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_Iq, gamma_A, gamma_Aq, eta, mu, chi, N_e = u
 
-    # used a fixed arg for gamma_Iq(t)
+    gamma_Iq = z_1 + z_2 * math.tanh((t - a) / b)
+
     dE = (1 - rho) * phi * (I + epsilon * E + beta * A) * (N_e - E - E_q - I - I_q - A - A_q - R_1 - R_2) - alpha * E
     dE_q = rho * phi * (I + epsilon * E + beta * A) * (N_e - E - E_q - I - I_q - A - A_q - R_1 - R_2) - alpha * E_q
     dI = alpha * eta * E - theta * I - gamma_I * I
@@ -75,14 +82,16 @@ def model(y, t, rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_Iq, gamma_
     return [dE, dE_q, dI, dI_q, dA, dA_q, dR_1, dR_2]
 
 
-def model_infected(y, t, E, alpha, eta, theta, gamma_I):
-    I = y
+def mse_loss(x:np.ndarray, y:np.ndarray):
+    # x: prediction, y: real
+    assert len(x) == len(y)
+    # x = np.array(x)
+    # y = np.array(y)
+    loss = np.sum(np.square(x - y)) / len(x)
+    return loss
 
-    dI = alpha * eta * E - theta * I - gamma_I * I
 
-    return dI
-
-
+# E, E_q, I, I_q, A, A_q, R_1, R_2
 y0 = [0, 0, 1, 0, 0, 0, 0, 0]
 days = 20
 t = np.linspace(0, days, days + 1)
@@ -94,29 +103,75 @@ beta = 0.4
 alpha = 0.2
 theta = 0.75
 gamma_I = 7e-4
-gamma_Iq = 0.5
 gamma_A = 1e-4
 gamma_Aq = 0.03
 eta = 0.75
 mu = 0.2
 chi = 0
-N_e = 1e7
+N_e = 5.8e7
+z_1 = 0.045
+z_2 = 0.026
+a = 64
+b = 5
+params = [rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_A, gamma_Aq, eta, mu, chi, N_e, z_1, z_2, a, b]
 
 sol = odeint(model, y0, t,
-             args=(rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_Iq, gamma_A, gamma_Aq, eta, mu, chi, N_e))
+             args=(rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_A, gamma_Aq, eta, mu, chi, N_e, z_1, z_2, a, b))
 
-# sol = odeint(model_infected, 1, t, args=(E, alpha, eta, theta, gamma_I))
-
-# popt, pcov = scipy.optimize.curve_fit(model, xdata, ydata)
-# popt, pcov = scipy.optimize.curve_fit(model_infected, xdata, ydata)
+# popt, pcov = scipy.optimize.curve_fit(model, t, ydata)
 # print(popt)
 
-plt.plot(t, sol[:, 0], 'b', label='Exposed')
-plt.plot(t, sol[:, 2], 'g', label='Infected')
+# plt.plot(t, sol[:, 0], 'b', label='Exposed')
+# plt.plot(t, sol[:, 1], '--b', label='Exposed_quarantine')
+
+# plt.plot(t, sol[:, 2], 'g', label='Infected')
+plt.plot(t, sol[:, 3], '--g', label='Infected_quarantine')
+
+# plt.plot(t, sol[:, 4], 'r', label='Asy')
+plt.plot(t, sol[:, 5], '--r', label='Asy_quarantine')
+
+plt.plot(t, sol[:, 6], '--y', label='Removed_quarantined')
+# plt.plot(t, sol[:, 7], 'y', label='Removed')
+
+
+plt.plot(sub_data.date,  # x轴数据
+         sub_data.now_confirm,  # y轴数据
+         linestyle='-',  # 折线类型
+         linewidth=2,  # 折线宽度
+         color='steelblue',  # 折线颜色
+         marker='o',  # 点的形状
+         markersize=2,  # 点的大小
+         markeredgecolor='black',  # 点的边框色
+         markerfacecolor='brown')  # 点的填充色
+plt.plot(sub_data.date,  # x轴数据
+         sub_data.now_asy,  # y轴数据
+         linestyle='-',  # 折线类型
+         linewidth=2,  # 折线宽度
+         color='g',  # 折线颜色
+         marker='o',  # 点的形状
+         markersize=2,  # 点的大小
+         markeredgecolor='black',  # 点的边框色
+         markerfacecolor='brown')  # 点的填充色
+plt.plot(sub_data.date,  # x轴数据
+         sub_data.heal,  # y轴数据
+         linestyle='-',  # 折线类型
+         linewidth=2,  # 折线宽度
+         color='r',  # 折线颜色
+         marker='o',  # 点的形状
+         markersize=2,  # 点的大小
+         markeredgecolor='black',  # 点的边框色
+         markerfacecolor='brown')  # 点的填充色
+
+temp_array = sub_data.now_confirm.to_numpy()
+print(type(temp_array), len(temp_array))
+# print(temp_array)
+
+print(mse_loss(sol[:, 3], sub_data.now_confirm.to_numpy()))
+
 plt.legend(loc='best')
 plt.xlabel('t')
 plt.grid()
-plt.show()
+# plt.show()
 
 """
 # 自定义函数，curve_fit支持自定义函数的形式进行拟合，这里定义的是指数函数的形式

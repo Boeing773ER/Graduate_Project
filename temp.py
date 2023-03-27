@@ -1,63 +1,99 @@
+# # ----- convert date format -----
+# import pandas as pd
+# import matplotlib.pyplot as plt
+#
+# file_path = "./CN_COVID_data/domestic_recent_provinces.csv"
+# data_file = pd.read_csv(file_path)
+# # 取出指定日期范围数据
+# sub_data = data_file.loc[data_file.province == "上海", :]
+# # sub_data = sub_data.loc[data_file.city == "浦东"]
+# # sub_data = sub_data.loc[data_file.date <= 5, :]
+# sub_data = sub_data.loc[data_file.year == 2020]
+# # sub_data = data_file
+#
+# # print(data_file["date"], type(data_file["date"]))
+#
+# # print(type(data_file.loc[0, "year"]), type(data_file.loc[0, "date"]))
+#
+# date = data_file.loc[:, "year":"date"]
+# date.insert(loc=0, column='year-date', value=0)
+# array = data_file["year"].to_string(index=False)
+# year_list = array.split('\n')
+#
+# array = data_file["date"].to_string(index=False)
+# date_list = array.split('\n')
+#
+# year_date_list = []
+# z = zip(year_list, date_list)
+# for year, date in z:
+#     month = date.split('.')[0]
+#     day = date.split('.')[1]
+#     str_date = '{:0>2d}'.format(int(month)) + '-' + '{:0>2d}'.format(int(day))
+#     temp_str = year + "-" + str(str_date)
+#     year_date_list.append(temp_str)
+# print(data_file.columns)
+# data_file.drop(columns=['year', 'date'], axis=1, inplace=True)
+# data_file.insert(loc=0, column="date", value=year_date_list)
+# data_file.rename(columns={'deadAdd': 'dead_add', 'now_wzz': 'now_asy', 'wzz_add': 'asy_add'}, inplace=True)
+# print(data_file.columns)
+# data_file.to_csv("./CN_COVID_data/domestic_data.csv")
+
 import pandas as pd
 import matplotlib.pyplot as plt
 
-file_path = "./CN_COVID_data/domestic_recent_provinces.csv"
+file_path = "./CN_COVID_data/domestic_data.csv"
 data_file = pd.read_csv(file_path)
 # 取出指定日期范围数据
-sub_data = data_file.loc[data_file.province == "上海", :]
+sub_data = data_file.loc[data_file.province == "湖北", :]
 # sub_data = sub_data.loc[data_file.city == "浦东"]
 # sub_data = sub_data.loc[data_file.date <= 5, :]
-sub_data = sub_data.loc[data_file.year == 2020]
+sub_data = sub_data.loc[data_file.date > "2020-01-01", :]
+sub_data = sub_data.loc["2020-04-01" > data_file.date, :]
+# sub_data.to_csv("./CN_COVID_data/beijing_data.csv")
 # sub_data = data_file
 
-# print(data_file["date"], type(data_file["date"]))
 
-date = data_file.loc[:, "year":"date"]
-date.insert(loc=0, column='year-date', value=0)
-array = pd.to_numeric(data_file["year"])
-year_list = array.tolist()
-array = pd.to_numeric(data_file["date"])
-date_list = array.tolist()
-year_date_list = []
-z = zip(year_list, date_list)
-for year, date in z:
-    str_date = str(date)
-    month = str_date.split('.')[0]
-    day = str_date.split('.')[1]
-    str_date = '{:0>2d}'.format(int(month)) + '-' + '{:0>2d}'.format(int(day))
-    temp_str = str(year) + "-" + str(str_date)
-    year_date_list.append(temp_str)
-print(data_file.columns)
-data_file.drop(columns=['year', 'date'], axis=1, inplace=True)
-data_file.insert(loc=0, column="date", value=year_date_list)
-data_file.rename(columns={'deadAdd': 'dead_add', 'now_wzz': 'now_asy', 'wzz_add': 'asy_add'}, inplace=True)
-print(data_file.columns)
-data_file.to_csv("./CN_COVID_data/domestic_data.csv")
-
-
-# plt.style.use("ggplot")
-# # 设置中文编码和符号的正常显示
-# plt.rcParams["font.sans-serif"] = "KaiTi"
-# plt.rcParams["axes.unicode_minus"] = False
+plt.style.use("ggplot")
+# 设置中文编码和符号的正常显示
+plt.rcParams["font.sans-serif"] = "KaiTi"
+plt.rcParams["axes.unicode_minus"] = False
 # 设置图框的大小
-# fig = plt.figure(figsize=(30, 18))
-#
-# plt.plot(sub_data.date,  # x轴数据
-#          sub_data.confirm_add,  # y轴数据
-#          linestyle='-',  # 折线类型
-#          linewidth=2,  # 折线宽度
-#          color='steelblue',  # 折线颜色
-#          marker='o',  # 点的形状
-#          markersize=2,  # 点的大小
-#          markeredgecolor='black',  # 点的边框色
-#          markerfacecolor='brown')  # 点的填充色
+fig = plt.figure(figsize=(30, 18))
+
+plt.plot(sub_data.date,  # x轴数据
+         sub_data.now_confirm,  # y轴数据
+         linestyle='-',  # 折线类型
+         linewidth=2,  # 折线宽度
+         color='steelblue',  # 折线颜色
+         marker='o',  # 点的形状
+         markersize=2,  # 点的大小
+         markeredgecolor='black',  # 点的边框色
+         markerfacecolor='brown')  # 点的填充色
+plt.plot(sub_data.date,  # x轴数据
+         sub_data.now_asy,  # y轴数据
+         linestyle='-',  # 折线类型
+         linewidth=2,  # 折线宽度
+         color='g',  # 折线颜色
+         marker='o',  # 点的形状
+         markersize=2,  # 点的大小
+         markeredgecolor='black',  # 点的边框色
+         markerfacecolor='brown')  # 点的填充色
+plt.plot(sub_data.date,  # x轴数据
+         sub_data.heal,  # y轴数据
+         linestyle='-',  # 折线类型
+         linewidth=2,  # 折线宽度
+         color='r',  # 折线颜色
+         marker='o',  # 点的形状
+         markersize=2,  # 点的大小
+         markeredgecolor='black',  # 点的边框色
+         markerfacecolor='brown')  # 点的填充色
 
 # days = 30
 # T = [i for i in range(0, days)]  # 时间
-# # result = discrete_stochastic_model.calc(T)
-#
+# result = discrete_stochastic_model.calc(T)
+
 # plt.plot(T, , color='b', label='传染者')
-# plt.show()
+plt.show()
 
 
 # from scipy.optimize import curve_fit
@@ -106,4 +142,30 @@ data_file.to_csv("./CN_COVID_data/domestic_data.csv")
 # plt.xlabel('x')
 # plt.ylabel('y')
 # plt.legend()
+# plt.show()
+
+
+# import numpy as np
+# from scipy.integrate import odeint
+# import matplotlib.pyplot as plt
+#
+#
+# def pend(y, t, b, c):
+#     theta, omega = y
+#     dydt = [omega, -b*omega - c*np.sin(theta)]
+#     return dydt
+#
+#
+# b = 0.25
+# c = 5.0
+# y0 = [np.pi - 0.1, 0.0]
+# t = np.linspace(0, 10, 101)
+#
+# sol = odeint(pend, y0, t, args=(b, c))
+#
+# plt.plot(t, sol[:, 0], 'b', label='theta(t)')
+# plt.plot(t, sol[:, 1], 'g', label='omega(t)')
+# plt.legend(loc='best')
+# plt.xlabel('t')
+# plt.grid()
 # plt.show()
