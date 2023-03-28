@@ -76,7 +76,6 @@ def model(y, t, rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_A, gamma_A
 file_path = "./CN_COVID_data/domestic_data.csv"
 y_data = read_file(file_path)
 
-
 # E, E_q, I, I_q, A, A_q, R_1, R_2
 y0 = [0, 0, 1, 0, 0, 0, 0, 0]
 days = 20
@@ -99,6 +98,8 @@ z_1 = 0.045
 z_2 = 0.026
 a = 64
 b = 5
+
+
 # params = [rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_A, gamma_Aq, eta, mu, chi, N_e, z_1, z_2, a, b]
 
 
@@ -118,12 +119,15 @@ def mse_loss(x: np.ndarray, y: np.ndarray):
 def aim(Phen, CV):
     phi = Phen[:, [0]]
     alpha = Phen[:, [1]]
+    epsilon = Phen[:, [2]]
+    beta = Phen[:, [3]]
 
     f = []
 
-    for phi_x, alpha_x in zip(phi, alpha):
-        sol = odeint(model, y0, t, args=(rho, phi_x, epsilon, beta, alpha_x, theta, gamma_I, gamma_A, gamma_Aq, eta, mu, chi,
-                                         N_e, z_1, z_2, a, b))  # 计算目标函数值
+    for phi_x, alpha_x, epsilon_x, beta_x in zip(phi, alpha, epsilon, beta):
+        sol = odeint(model, y0, t,
+                     args=(rho, phi_x, epsilon_x, beta_x, alpha_x, theta, gamma_I, gamma_A, gamma_Aq, eta, mu, chi,
+                           N_e, z_1, z_2, a, b))  # 计算目标函数值
         I_q = sol[:, 3]
         A_q = sol[:, 5]
         R_q = sol[:, 6]
@@ -141,7 +145,6 @@ def aim(Phen, CV):
 file_path = "./CN_COVID_data/domestic_data.csv"
 ydata = read_file(file_path)
 
-
 # 定义种群规模（个体数目）
 # phi, alpha
 
@@ -154,20 +157,24 @@ ydata = read_file(file_path)
 # Chrom=crtpc(Encoding, Nind, FieldDR)
 # print(Chrom)
 
-# -------变量设置--------
-x1 = [1e-6, 1e-3]
+""" ===========变量设置==========="""
+x1 = [1e-6, 1e-3]  # 第一个决策变量范围
 x2 = [0.1, 1]
-b1 = [1, 1]
+x3 = [0.1, 0.9]
+x4 = [0.1, 0.9]
+b1 = [1, 1]  # 第一个决策变量边界，1表示包含范围的边界，0表示不包含
 b2 = [1, 1]
-ranges = np.vstack([x1, x2]).T
-borders = np.vstack([b1, b2]).T
-varTypes = np.array([0, 0])
+b3 = [1, 1]
+b4 = [1, 1]
+ranges = np.vstack([x1, x2, x3, x4]).T  # 生成自变量的范围矩阵，使得第一行为所有决策变量的下界，第二行为上界
+borders = np.vstack([b1, b2, b3, b4]).T  # 生成自变量的边界矩阵
+varTypes = np.array([0, 0, 0, 0])  # 决策变量的类型，0表示连续，1表示离散
 
-# --------染色体编码设置--------
+""" ===========染色体编码设置==========="""
 Encoding = 'BG'  # 表示采用“实整数编码”，即变量可以是连续的也可以是离散的
-codes = [0, 0]
-precisions = [4, 4]
-scales = [0, 0]
+codes = [0, 0, 0, 0]  # 决策变量的编码方式，设置两个0表示两个决策变量均使用二进制编码
+precisions = [4, 4, 4, 4] # 决策变量的编码精度，表示二进制编码串解码后能表示的决策变量的精度可达到小数点后6位
+scales = [0, 0, 0, 0] # 0表示采用算术刻度，1表示采用对数刻度
 FieldD = ea.crtfld(Encoding, varTypes, ranges, borders, precisions, codes, scales)
 
 # ---------遗传算法参数设置---------
@@ -220,7 +227,6 @@ print('最优解的决策变量值为：')
 for i in range(variable.shape[1]):
     print('x' + str(i) + '=', variable[0, i])
 print('用时：', end_time - start_time, '秒')
-
 
 # sol = odeint(model, y0, t, args=(rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_A, gamma_Aq, eta, mu, chi,
 #                                      N_e, z_1, z_2, a, b))  # 计算目标函数值
