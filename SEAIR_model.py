@@ -97,10 +97,12 @@ days = 20
 t = np.linspace(0, days, days + 1)
 
 rho = 0.85
-phi = 3.696e-5
+# phi = 3.696e-5
+phi = 0.0004672000000000001
 epsilon = 0.5
 beta = 0.4
-alpha = 0.2
+# alpha = 0.2
+alpha = 0.10005493499359092
 theta = 0.75
 gamma_I = 7e-4
 gamma_A = 1e-4
@@ -171,7 +173,7 @@ print(mse_loss(sol[:, 3], sub_data.now_confirm.to_numpy()))
 plt.legend(loc='best')
 plt.xlabel('t')
 plt.grid()
-# plt.show()
+plt.show()
 
 """
 # 自定义函数，curve_fit支持自定义函数的形式进行拟合，这里定义的是指数函数的形式
