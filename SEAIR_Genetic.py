@@ -38,8 +38,9 @@ gamma_Iq(t) = z_1 + z_2 * tanh((t - a)/b)
 
 def read_file(file_path):
     data_file = pd.read_csv(file_path)
-    sub_data = data_file.loc[data_file.province == "湖北", :]
-    sub_data = sub_data.loc["2020-02-10" > sub_data.date, :]
+    sub_data = data_file.loc[data_file.province == "上海", :]
+    sub_data = sub_data.loc[sub_data.date > "2022-03-15", :]
+    sub_data = sub_data.loc["2022-04-17" > sub_data.date, :]
     ydata = pd.DataFrame()
     ydata["now_confirm"] = sub_data["now_confirm"]
     ydata["heal"] = sub_data["heal"]
@@ -78,33 +79,45 @@ y_data = read_file(file_path)
 
 # E, E_q, I, I_q, A, A_q, R_1, R_2
 y0 = [0, 0, 1, 0, 0, 0, 0, 0]
-days = 20
+days = 31
 t = np.linspace(0, days, days + 1)
 
-rho = 0.85
-phi = 3.696e-5
-epsilon = 0.5
-beta = 0.4
-alpha = 0.2
-theta = 0.75
-gamma_I = 7e-4
-gamma_A = 1e-4
+rho = 0.09039858389794299
+phi = 0.10175181590673259
+beta = 0.06927913080632363
+epsilon = 0.9621558933040346
+alpha = 0.03967527314899591
+eta = 0.27186717939327354
+theta = 0.5458096807666484
+mu = 0.003784410669596533
+gamma_I = 0.759506805835317
+gamma_A = 0.0610999206494537
 gamma_Aq = 0.03
-eta = 0.75
-mu = 0.2
 chi = 0
-N_e = 5.8e7
+N_e = 2.489e7
 z_1 = 0.045
 z_2 = 0.026
 a = 64
 b = 5
 
 
-# params = [rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_A, gamma_Aq, eta, mu, chi, N_e, z_1, z_2, a, b]
-
+def plot_graph(rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A, gamma_Aq, chi, N_e, z_1, z_2, a, b):
+    sol = odeint(model, y0, t, args=(rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_A, gamma_Aq, eta, mu, chi,
+                                     N_e, z_1, z_2, a, b))
+    plt.plot(t, sol[:, 3], '--g', label='Pre_Inf_q')
+    plt.plot(t, y_data.now_confirm, 'g', label='Real_Inf_q')
+    plt.plot(t, sol[:, 5], '--r', label='Pre_Asy_q')
+    plt.plot(t, y_data.now_asy, 'r', label='Real_Asy_q')
+    plt.plot(t, sol[:, 6], '--y', label='Pre_Removed_q')
+    plt.plot(t, y_data.heal, 'y', label='Real_Removed_q')
+    plt.legend(loc='best')
+    plt.xlabel('t')
+    plt.grid()
+    plt.show()
 
 def mse_loss(x: np.ndarray, y: np.ndarray):
     # x: prediction, y: real
+    # print(len(x), len(y))
     assert len(x) == len(y)
     # x = np.array(x)
     # y = np.array(y)
@@ -117,17 +130,28 @@ def mse_loss(x: np.ndarray, y: np.ndarray):
 # 种群个体违反约束程度矩阵(CV)
 # 种群适应度(FitnV)
 def aim(Phen, CV):
-    phi = Phen[:, [0]]
-    alpha = Phen[:, [1]]
-    epsilon = Phen[:, [2]]
-    beta = Phen[:, [3]]
-
+    rho = Phen[:, [0]]
+    phi = Phen[:, [1]]
+    beta = Phen[:, [2]]
+    epsilon = Phen[:, [3]]
+    alpha = Phen[:, [4]]
+    eta = Phen[:, [5]]
+    theta = Phen[:, [6]]
+    mu = Phen[:, [7]]
+    gamma_I = Phen[:, [8]]
+    gamma_A = Phen[:, [9]]
+    # gamma_Aq = Phen[:, [10]]
+    # print(len(gamma_Aq))
+    # print(gamma_Aq)
     f = []
 
-    for phi_x, alpha_x, epsilon_x, beta_x in zip(phi, alpha, epsilon, beta):
-        sol = odeint(model, y0, t,
-                     args=(rho, phi_x, epsilon_x, beta_x, alpha_x, theta, gamma_I, gamma_A, gamma_Aq, eta, mu, chi,
-                           N_e, z_1, z_2, a, b))  # 计算目标函数值
+    # for phi_x, alpha_x, epsilon_x, beta_x, rho_x, theta_x, gamma_I_x, gamma_A_x, gamma_Aq_x in \
+    #         zip(phi, alpha, epsilon, beta, rho, theta, gamma_I, gamma_A, gamma_Aq):
+    for rho_x, phi_x, beta_x, epsilon_x, alpha_x, eta_x, theta_x, mu_x, gamma_I_x, gamma_A_x in \
+            zip(rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A):
+        # 计算目标函数值
+        sol = odeint(model, y0, t, args=(rho_x, phi_x, epsilon_x, beta_x, alpha_x, theta_x,
+                                         gamma_I_x, gamma_A_x, gamma_Aq, eta_x, mu_x, chi, N_e, z_1, z_2, a, b))
         I_q = sol[:, 3]
         A_q = sol[:, 5]
         R_q = sol[:, 6]
@@ -157,30 +181,81 @@ ydata = read_file(file_path)
 # Chrom=crtpc(Encoding, Nind, FieldDR)
 # print(Chrom)
 
+# rho = Phen[:, [0]]
+# phi = Phen[:, [1]]
+# beta = Phen[:, [2]]
+# epsilon = Phen[:, [3]]
+# alpha = Phen[:, [4]]
+# eta = Phen[:, [5]]
+# theta = Phen[:, [6]]
+# mu = Phen[:, [7]]
+# gamma_I = Phen[:, [6]]
+# gamma_A = Phen[:, [7]]
+# gamma_Aq = Phen[:, [8]]
+# print(len(gamma_Aq))
+
 """ ===========变量设置==========="""
-x1 = [1e-6, 1e-3]  # 第一个决策变量范围
-x2 = [0.1, 1]
-x3 = [0.1, 0.9]
-x4 = [0.1, 0.9]
+# x1 = [0.1, 0.95]
+# x2 = [1e-6, 1e-3]  # 第一个决策变量范围
+# x3 = [0.1, 0.9]
+# x4 = [0.1, 0.9]
+# x5 = [0.1, 1]
+# x6 = [0.2, 0.95]
+# x7 = [0.1, 0.95]
+# x8 = [0, 1]
+# x9 = [0, 1]
+x1 = [0, 1]
+x2 = [0, 1]  # 第一个决策变量范围
+x3 = [0, 1]
+x4 = [0, 1]
+x5 = [0, 1]
+x6 = [0, 1]
+x7 = [0, 1]
+x8 = [0, 1]
+x9 = [0, 1]
+x10 = [0, 1]
+x11 = [0, 1]
 b1 = [1, 1]  # 第一个决策变量边界，1表示包含范围的边界，0表示不包含
 b2 = [1, 1]
 b3 = [1, 1]
 b4 = [1, 1]
-ranges = np.vstack([x1, x2, x3, x4]).T  # 生成自变量的范围矩阵，使得第一行为所有决策变量的下界，第二行为上界
-borders = np.vstack([b1, b2, b3, b4]).T  # 生成自变量的边界矩阵
-varTypes = np.array([0, 0, 0, 0])  # 决策变量的类型，0表示连续，1表示离散
+b5 = [1, 1]
+b6 = [1, 1]
+b7 = [1, 1]
+b8 = [1, 1]
+b9 = [1, 1]
+b10 = [1, 1]
+b11 = [1, 1]
+
+params_count = 10
+
+ranges = np.vstack([x1, x2, x3, x4, x5, x6, x7, x8, x9, x10]).T  # 生成自变量的范围矩阵，使得第一行为所有决策变量的下界，第二行为上界
+borders = np.vstack([b1, b2, b3, b4, b5, b6, b7, b8, b9, b10]).T  # 生成自变量的边界矩阵
+# varTypes = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])  # 决策变量的类型，0表示连续，1表示离散
+varTypes = np.array(np.zeros(params_count))  # 决策变量的类型，0表示连续，1表示离散
+# ranges = np.vstack([x1, x2, x3, x4, x5, x6]).T  # 生成自变量的范围矩阵，使得第一行为所有决策变量的下界，第二行为上界
+# borders = np.vstack([b1, b2, b3, b4, b5, b6]).T  # 生成自变量的边界矩阵
+# varTypes = np.array([0, 0, 0, 0, 0, 0])  # 决策变量的类型，0表示连续，1表示离散
 
 """ ===========染色体编码设置==========="""
 Encoding = 'BG'  # 表示采用“实整数编码”，即变量可以是连续的也可以是离散的
-codes = [0, 0, 0, 0]  # 决策变量的编码方式，设置两个0表示两个决策变量均使用二进制编码
-precisions = [4, 4, 4, 4] # 决策变量的编码精度，表示二进制编码串解码后能表示的决策变量的精度可达到小数点后6位
-scales = [0, 0, 0, 0] # 0表示采用算术刻度，1表示采用对数刻度
+# codes = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # 决策变量的编码方式，0表示决策变量使用二进制编码
+codes = np.zeros(params_count)  # 决策变量的编码方式，0表示决策变量使用二进制编码
+precisions = []
+for i in range(params_count):
+    precisions.append(4)  # 决策变量的编码精度，表示二进制编码串解码后能表示的决策变量的精度可达到小数点后6位
+# scales = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # 0表示采用算术刻度，1表示采用对数刻度
+scales = np.zeros(params_count)  # 0表示采用算术刻度，1表示采用对数刻度
+# codes = [0, 0, 0, 0, 0, 0]  # 决策变量的编码方式，设置两个0表示两个决策变量均使用二进制编码
+# precisions = [4, 4, 4, 4, 4, 4]  # 决策变量的编码精度，表示二进制编码串解码后能表示的决策变量的精度可达到小数点后6位
+# scales = [0, 0, 0, 0, 0, 0]  # 0表示采用算术刻度，1表示采用对数刻度
+
 FieldD = ea.crtfld(Encoding, varTypes, ranges, borders, precisions, codes, scales)
 
 # ---------遗传算法参数设置---------
 NIND = 100
-MAXGEN = 200
-maxormins = np.array([1])
+MAXGEN = 100
+maxormins = np.array([1])   # 1：目标函数最小化，-1：目标函数最大化
 select_style = 'rws'
 rec_style = 'xovdp'
 mut_style = 'mutbin'
@@ -227,6 +302,9 @@ print('最优解的决策变量值为：')
 for i in range(variable.shape[1]):
     print('x' + str(i) + '=', variable[0, i])
 print('用时：', end_time - start_time, '秒')
+
+plot_graph(variable[0, 0], variable[0, 1], variable[0, 2], variable[0, 3], variable[0, 4], variable[0, 5],
+           variable[0, 6], variable[0, 7], variable[0, 8], variable[0, 9], gamma_Aq, chi, N_e, z_1, z_2, a, b)
 
 # sol = odeint(model, y0, t, args=(rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_A, gamma_Aq, eta, mu, chi,
 #                                      N_e, z_1, z_2, a, b))  # 计算目标函数值

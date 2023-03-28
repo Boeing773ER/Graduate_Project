@@ -37,6 +37,25 @@
 # data_file.rename(columns={'deadAdd': 'dead_add', 'now_wzz': 'now_asy', 'wzz_add': 'asy_add'}, inplace=True)
 # print(data_file.columns)
 # data_file.to_csv("./CN_COVID_data/domestic_data.csv")
+import numpy as np
+
+# rho = 1.08e-01
+# phi = 2.85e-01
+# beta = 8.94e-01
+# epsilon = 4.96e-01
+# alpha = 2.17e-02
+# eta = 1.97e-01
+# theta = 9.96e-01
+# mu = 1.46e-01
+# gamma_I = 6.03e-01
+# gamma_A = 2.31e-01
+# gamma_Aq = 3e-02
+# chi = 0
+# N_e = 2.489e7
+# z_1 = 0.045
+# z_2 = 0.026
+# a = 64
+# b = 5
 
 import pandas as pd
 import matplotlib.pyplot as plt
