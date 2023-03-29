@@ -37,7 +37,7 @@
 # data_file.rename(columns={'deadAdd': 'dead_add', 'now_wzz': 'now_asy', 'wzz_add': 'asy_add'}, inplace=True)
 # print(data_file.columns)
 # data_file.to_csv("./CN_COVID_data/domestic_data.csv")
-import numpy as np
+
 
 # rho = 1.08e-01
 # phi = 2.85e-01

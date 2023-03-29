@@ -5,9 +5,6 @@ from scipy.integrate import odeint
 import matplotlib.pyplot as plt
 import geatpy as ea
 import time
-from geatpy import crtpc
-from geatpy import bs2ri
-
 """
 ρ rho       被隔离的易感者的比例 0.1 ∼ 0.95 Yes
 ϕ phi       传染性个体通过接触传播的概率 10^−6 ∼ 10^−3 Yes
@@ -74,8 +71,24 @@ def model(y, t, rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_A, gamma_A
     return [dE, dE_q, dI, dI_q, dA, dA_q, dR_1, dR_2]
 
 
+def model_2(y, t, rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_A, gamma_Aq, gamma_Iq, eta, mu, chi, N_e):
+    E, E_q, I, I_q, A, A_q, R_1, R_2 = y
+
+    dE = (1 - rho) * phi * (I + epsilon * E + beta * A) * (N_e - E - E_q - I - I_q - A - A_q - R_1 - R_2) - alpha * E
+    dE_q = rho * phi * (I + epsilon * E + beta * A) * (N_e - E - E_q - I - I_q - A - A_q - R_1 - R_2) - alpha * E_q
+    dI = alpha * eta * E - theta * I - gamma_I * I
+    dI_q = alpha * eta * E_q + theta * I - gamma_Iq * I_q
+    dA = alpha * (1 - eta) * E - mu * A - gamma_A * A
+    dA_q = alpha * (1 - eta) * E_q + mu * A - gamma_Aq * A_q
+    dR_1 = gamma_Iq * I_q + chi * gamma_Aq * A_q
+    dR_2 = gamma_A * A + gamma_I * I + (1 - chi) * gamma_Aq * A_q
+
+    return [dE, dE_q, dI, dI_q, dA, dA_q, dR_1, dR_2]
+
+
 file_path = "./CN_COVID_data/domestic_data.csv"
 y_data = read_file(file_path)
+
 
 # E, E_q, I, I_q, A, A_q, R_1, R_2
 y0 = [0, 0, 1, 0, 0, 0, 0, 0]
@@ -93,6 +106,7 @@ mu = 0.003784410669596533
 gamma_I = 0.759506805835317
 gamma_A = 0.0610999206494537
 gamma_Aq = 0.03
+gamma_Iq = 0.05
 chi = 0
 N_e = 2.489e7
 z_1 = 0.045
@@ -100,10 +114,14 @@ z_2 = 0.026
 a = 64
 b = 5
 
+# gamma_Iq = z_1 + z_2 * math.tanh((10 - a) / b)
+
 
 def plot_graph(rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A, gamma_Aq, chi, N_e, z_1, z_2, a, b):
-    sol = odeint(model, y0, t, args=(rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_A, gamma_Aq, eta, mu, chi,
-                                     N_e, z_1, z_2, a, b))
+    # sol = odeint(model, y0, t, args=(rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_A, gamma_Aq, eta, mu, chi,
+    #                                  N_e, z_1, z_2, a, b))
+    sol = odeint(model_2, y0, t, args=(rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_A, gamma_Aq, gamma_Iq,
+                                     eta, mu, chi, N_e))
     plt.plot(t, sol[:, 3], '--g', label='Pre_Inf_q')
     plt.plot(t, y_data.now_confirm, 'g', label='Real_Inf_q')
     plt.plot(t, sol[:, 5], '--r', label='Pre_Asy_q')
@@ -115,12 +133,11 @@ def plot_graph(rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A,
     plt.grid()
     plt.show()
 
+
 def mse_loss(x: np.ndarray, y: np.ndarray):
     # x: prediction, y: real
     # print(len(x), len(y))
     assert len(x) == len(y)
-    # x = np.array(x)
-    # y = np.array(y)
     loss = np.sum(np.square(x - y)) / len(x)
     return loss
 
@@ -140,18 +157,19 @@ def aim(Phen, CV):
     mu = Phen[:, [7]]
     gamma_I = Phen[:, [8]]
     gamma_A = Phen[:, [9]]
-    # gamma_Aq = Phen[:, [10]]
+    gamma_Iq = Phen[:, [10]]
     # print(len(gamma_Aq))
     # print(gamma_Aq)
+    print(Phen)
     f = []
 
-    # for phi_x, alpha_x, epsilon_x, beta_x, rho_x, theta_x, gamma_I_x, gamma_A_x, gamma_Aq_x in \
-    #         zip(phi, alpha, epsilon, beta, rho, theta, gamma_I, gamma_A, gamma_Aq):
-    for rho_x, phi_x, beta_x, epsilon_x, alpha_x, eta_x, theta_x, mu_x, gamma_I_x, gamma_A_x in \
-            zip(rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A):
+    for rho_x, phi_x, beta_x, epsilon_x, alpha_x, eta_x, theta_x, mu_x, gamma_I_x, gamma_A_x, gamma_Iq_x in \
+            zip(rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A, gamma_Iq):
         # 计算目标函数值
-        sol = odeint(model, y0, t, args=(rho_x, phi_x, epsilon_x, beta_x, alpha_x, theta_x,
-                                         gamma_I_x, gamma_A_x, gamma_Aq, eta_x, mu_x, chi, N_e, z_1, z_2, a, b))
+        # sol = odeint(model, y0, t, args=(rho_x, phi_x, epsilon_x, beta_x, alpha_x, theta_x,
+        #                                  gamma_I_x, gamma_A_x, gamma_Aq_x, eta_x, mu_x, chi, N_e, z_1, z_2, a, b))
+        sol = odeint(model_2, y0, t, args=(rho_x, phi_x, epsilon_x, beta_x, alpha_x, theta_x, gamma_I_x, gamma_A_x,
+                                         gamma_Aq, gamma_Iq_x, eta_x, mu_x, chi, N_e))
         I_q = sol[:, 3]
         A_q = sol[:, 5]
         R_q = sol[:, 6]
@@ -169,17 +187,6 @@ def aim(Phen, CV):
 file_path = "./CN_COVID_data/domestic_data.csv"
 ydata = read_file(file_path)
 
-# 定义种群规模（个体数目）
-# phi, alpha
-
-# # 创建“区域描述器”，表明有4个决策变量，范围分别是[-3.1, 4.2], [-2, 2],[0, 1],[3, 5]，
-# # FieldDR第三行[0,0,1,1]表示前两个决策变量是连续型的，后两个变量是离散型的
-# FieldDR=np.array([[-3.1, -2, 0, 3],
-#                   [ 4.2,  2, 1, 5],
-#                   [ 0,    0, 1, 1]])
-# # 调用crtri函数创建实数值种群
-# Chrom=crtpc(Encoding, Nind, FieldDR)
-# print(Chrom)
 
 # rho = Phen[:, [0]]
 # phi = Phen[:, [1]]
@@ -227,10 +234,10 @@ b9 = [1, 1]
 b10 = [1, 1]
 b11 = [1, 1]
 
-params_count = 10
+params_count = 11
 
-ranges = np.vstack([x1, x2, x3, x4, x5, x6, x7, x8, x9, x10]).T  # 生成自变量的范围矩阵，使得第一行为所有决策变量的下界，第二行为上界
-borders = np.vstack([b1, b2, b3, b4, b5, b6, b7, b8, b9, b10]).T  # 生成自变量的边界矩阵
+ranges = np.vstack([x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11]).T  # 生成自变量的范围矩阵，使得第一行为所有决策变量的下界，第二行为上界
+borders = np.vstack([b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11]).T  # 生成自变量的边界矩阵
 # varTypes = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])  # 决策变量的类型，0表示连续，1表示离散
 varTypes = np.array(np.zeros(params_count))  # 决策变量的类型，0表示连续，1表示离散
 # ranges = np.vstack([x1, x2, x3, x4, x5, x6]).T  # 生成自变量的范围矩阵，使得第一行为所有决策变量的下界，第二行为上界
@@ -252,9 +259,9 @@ scales = np.zeros(params_count)  # 0表示采用算术刻度，1表示采用对�
 
 FieldD = ea.crtfld(Encoding, varTypes, ranges, borders, precisions, codes, scales)
 
-# ---------遗传算法参数设置---------
+""" ===========遗传算法参数设置==========="""
 NIND = 100
-MAXGEN = 100
+MAXGEN = 200
 maxormins = np.array([1])   # 1：目标函数最小化，-1：目标函数最大化
 select_style = 'rws'
 rec_style = 'xovdp'
@@ -306,53 +313,3 @@ print('用时：', end_time - start_time, '秒')
 plot_graph(variable[0, 0], variable[0, 1], variable[0, 2], variable[0, 3], variable[0, 4], variable[0, 5],
            variable[0, 6], variable[0, 7], variable[0, 8], variable[0, 9], gamma_Aq, chi, N_e, z_1, z_2, a, b)
 
-# sol = odeint(model, y0, t, args=(rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_A, gamma_Aq, eta, mu, chi,
-#                                      N_e, z_1, z_2, a, b))  # 计算目标函数值
-
-
-# -----------plot graph------------
-# # plt.plot(t, sol[:, 0], 'b', label='Exposed')
-# # plt.plot(t, sol[:, 1], '--b', label='Exposed_quarantine')
-#
-# # plt.plot(t, sol[:, 2], 'g', label='Infected')
-# plt.plot(t, sol[:, 3], '--g', label='Infected_quarantine')
-#
-# # plt.plot(t, sol[:, 4], 'r', label='Asy')
-# plt.plot(t, sol[:, 5], '--r', label='Asy_quarantine')
-#
-# plt.plot(t, sol[:, 6], '--y', label='Removed_quarantined')
-# # plt.plot(t, sol[:, 7], 'y', label='Removed')
-
-
-# plt.plot(sub_data.date,  # x轴数据
-#          sub_data.now_confirm,  # y轴数据
-#          linestyle='-',  # 折线类型
-#          linewidth=2,  # 折线宽度
-#          color='steelblue',  # 折线颜色
-#          marker='o',  # 点的形状
-#          markersize=2,  # 点的大小
-#          markeredgecolor='black',  # 点的边框色
-#          markerfacecolor='brown')  # 点的填充色
-# plt.plot(sub_data.date,  # x轴数据
-#          sub_data.now_asy,  # y轴数据
-#          linestyle='-',  # 折线类型
-#          linewidth=2,  # 折线宽度
-#          color='g',  # 折线颜色
-#          marker='o',  # 点的形状
-#          markersize=2,  # 点的大小
-#          markeredgecolor='black',  # 点的边框色
-#          markerfacecolor='brown')  # 点的填充色
-# plt.plot(sub_data.date,  # x轴数据
-#          sub_data.heal,  # y轴数据
-#          linestyle='-',  # 折线类型
-#          linewidth=2,  # 折线宽度
-#          color='r',  # 折线颜色
-#          marker='o',  # 点的形状
-#          markersize=2,  # 点的大小
-#          markeredgecolor='black',  # 点的边框色
-#          markerfacecolor='brown')  # 点的填充色
-
-# plt.legend(loc='best')
-# plt.xlabel('t')
-# plt.grid()
-# plt.show()
