@@ -311,39 +311,39 @@ def aim(Phen, CV):
 
 def write_param(log_file: _io.TextIOWrapper):
     log_file.writelines(region)
-    temp_str = "rho: " + str(rho)
+    temp_str = "rho: " + str(rho) + "\n"
     log_file.writelines(temp_str)
-    temp_str = "phi: ", str(phi)
+    temp_str = "phi: ", str(phi) + "\n"
     log_file.writelines(temp_str)
-    temp_str = "beta: ", str(beta)
+    temp_str = "beta: ", str(beta) + "\n"
     log_file.writelines(temp_str)
-    temp_str = "epsilon: ", str(epsilon)
+    temp_str = "epsilon: ", str(epsilon) + "\n"
     log_file.writelines(temp_str)
-    temp_str = "alpha: ", str(alpha)
+    temp_str = "alpha: ", str(alpha) + "\n"
     log_file.writelines(temp_str)
-    temp_str = "eta: ", str(eta)
+    temp_str = "eta: ", str(eta) + "\n"
     log_file.writelines(temp_str)
-    temp_str = "theta: ", str(theta)
+    temp_str = "theta: ", str(theta) + "\n"
     log_file.writelines(temp_str)
-    temp_str = "mu: ", str(mu)
+    temp_str = "mu: ", str(mu) + "\n"
     log_file.writelines(temp_str)
-    temp_str = "gamma_I: ", str(gamma_I)
+    temp_str = "gamma_I: ", str(gamma_I) + "\n"
     log_file.writelines(temp_str)
-    temp_str = "gamma_A: ", str(gamma_A)
+    temp_str = "gamma_A: ", str(gamma_A) + "\n"
     log_file.writelines(temp_str)
-    temp_str = "gamma_Aq: ", str(gamma_Aq)
+    temp_str = "gamma_Aq: ", str(gamma_Aq) + "\n"
     log_file.writelines(temp_str)
-    temp_str = "chi: ", str(chi)
+    temp_str = "chi: ", str(chi) + "\n"
     log_file.writelines(temp_str)
-    temp_str = "N_e: ", str(N_e)
+    temp_str = "N_e: ", str(N_e) + "\n"
     log_file.writelines(temp_str)
-    temp_str = "z_1: ", str(z_1)
+    temp_str = "z_1: ", str(z_1) + "\n"
     log_file.writelines(temp_str)
-    temp_str = "z_2: ", str(z_2)
+    temp_str = "z_2: ", str(z_2) + "\n"
     log_file.writelines(temp_str)
-    temp_str = "a: ", str(a)
+    temp_str = "a: ", str(a) + "\n"
     log_file.writelines(temp_str)
-    temp_str = "b: ", str(b)
+    temp_str = "b: ", str(b) + "\n"
     log_file.writelines(temp_str)
 
 
@@ -385,15 +385,15 @@ def start_GA():
         write_param(log_file)
         temp_str = '最优解的目标函数值：' + str(obj_trace[best_gen, 1])
         print(temp_str)
-        log_file.writelines(temp_str)
+        log_file.writelines(temp_str + "\n")
         variable = ea.bs2ri(var_trace[[best_gen], :], FieldD)  # 解码得到表现型（即对应的决策变量值）
         print('最优解的决策变量值为：')
-        log_file.writelines('最优解的决策变量值为：')
+        log_file.writelines('最优解的决策变量值为：' + "\n")
         for i in range(variable.shape[1]):
             temp_str = 'x' + str(i) + '=' + str(variable[0, i])
             print(temp_str)
-            log_file.writelines(temp_str)
-        log_file.writelines("")
+            log_file.writelines(temp_str + "\n")
+        log_file.writelines("\n")
         print('用时：', end_time - start_time, '秒')
 
     plot_graph(variable[0, 0], variable[0, 1], variable[0, 2], variable[0, 3], variable[0, 4], variable[0, 5],
