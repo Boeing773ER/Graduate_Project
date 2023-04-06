@@ -1,13 +1,11 @@
 import _io
-import io
 import math
 import numpy as np
-import pandas as pd
 from scipy.integrate import odeint
 import matplotlib.pyplot as plt
 import geatpy as ea
 import time
-import datetime as dt
+from functions import calc_days, read_file, loss_eva, rmse_loss, mse_loss
 
 """
 ρ rho       被隔离的易感者的比例 0.1 ∼ 0.95 Yes
@@ -37,14 +35,8 @@ gamma_Iq(t) = z_1 + z_2 * tanh((t - a)/b)
 """
 
 
-def calc_days(start, end):
-    start_date = dt.datetime.strptime(start, "%Y-%m-%d").date()
-    end_date = dt.datetime.strptime(end, "%Y-%m-%d").date()
-    return (end_date - start_date).days
-
-
 model_name = "SEAIR"
-file_path = "./CN_COVID_data/domestic_data.csv"
+file_path = "../CN_COVID_data/domestic_data.csv"
 region = "上海"
 start_date = "2022-03-10"
 end_date = "2022-04-17"
@@ -192,20 +184,6 @@ obj_trace = np.zeros((MAXGEN, 2))
 var_trace = np.zeros((MAXGEN, int(Lind)))
 
 
-def read_file(file_path, city, start_date, end_date):
-    data_file = pd.read_csv(file_path)
-    sub_data = data_file.loc[data_file.province == city, :]
-    sub_data = sub_data.loc[sub_data.date > start_date, :]
-    sub_data = sub_data.loc[end_date > sub_data.date, :]
-    # sub_data = data_file.loc[data_file.province == "city", :]
-    # sub_data = sub_data.loc["2020-02-11" > sub_data.date, :]
-    ydata = pd.DataFrame()
-    ydata["now_confirm"] = sub_data["now_confirm"]
-    ydata["heal"] = sub_data["heal"]
-    ydata["now_asy"] = sub_data["now_asy"]
-    return ydata
-
-
 y_data = read_file(file_path, region, start_date, end_date)
 
 
@@ -255,27 +233,9 @@ def plot_graph(file_name, rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_
     plt.legend(loc='best')
     plt.xlabel('t')
     plt.grid()
-    plt.savefig("./img/pic-"+file_name+".png")
+    plt.savefig("../img/pic-"+file_name+".png")
     plt.show()
-    # plt.savefig("./img/pic-{}.png".format(round))
-
-
-def mse_loss(x: np.ndarray, y: np.ndarray):
-    # x: prediction, y: real
-    # print(len(x), len(y))
-    assert len(x) == len(y)
-    loss = np.sum(np.square(x - y)) / len(x)
-    return loss
-
-
-def rmse_loss(x: np.ndarray, y: np.ndarray):
-    assert len(x) == len(y)
-    loss = np.sqrt(np.sum(np.square(x - y)) / len(x))
-    return loss
-
-
-def loss_eva(function, x: np.ndarray, y: np.ndarray):
-    return function(x, y)
+    # plt.savefig("../img/pic-{}.png".format(round))
 
 
 # 种群染色体矩阵(Chrom)
@@ -320,38 +280,22 @@ def aim(Phen, CV):
 def write_param(log_file: _io.TextIOWrapper):
     log_file.writelines(region)
     temp_str = "rho: " + str(rho) + "\n"
-    log_file.writelines(temp_str)
-    temp_str = "phi: ", str(phi) + "\n"
-    log_file.writelines(temp_str)
-    temp_str = "beta: ", str(beta) + "\n"
-    log_file.writelines(temp_str)
-    temp_str = "epsilon: ", str(epsilon) + "\n"
-    log_file.writelines(temp_str)
-    temp_str = "alpha: ", str(alpha) + "\n"
-    log_file.writelines(temp_str)
-    temp_str = "eta: ", str(eta) + "\n"
-    log_file.writelines(temp_str)
-    temp_str = "theta: ", str(theta) + "\n"
-    log_file.writelines(temp_str)
-    temp_str = "mu: ", str(mu) + "\n"
-    log_file.writelines(temp_str)
-    temp_str = "gamma_I: ", str(gamma_I) + "\n"
-    log_file.writelines(temp_str)
-    temp_str = "gamma_A: ", str(gamma_A) + "\n"
-    log_file.writelines(temp_str)
-    temp_str = "gamma_Aq: ", str(gamma_Aq) + "\n"
-    log_file.writelines(temp_str)
-    temp_str = "chi: ", str(chi) + "\n"
-    log_file.writelines(temp_str)
-    temp_str = "N_e: ", str(N_e) + "\n"
-    log_file.writelines(temp_str)
-    temp_str = "z_1: ", str(z_1) + "\n"
-    log_file.writelines(temp_str)
-    temp_str = "z_2: ", str(z_2) + "\n"
-    log_file.writelines(temp_str)
-    temp_str = "a: ", str(a) + "\n"
-    log_file.writelines(temp_str)
-    temp_str = "b: ", str(b) + "\n"
+    temp_str += "phi: ", str(phi) + "\n"
+    temp_str += "beta: ", str(beta) + "\n"
+    temp_str += "epsilon: ", str(epsilon) + "\n"
+    temp_str += "alpha: ", str(alpha) + "\n"
+    temp_str += "eta: ", str(eta) + "\n"
+    temp_str += "theta: ", str(theta) + "\n"
+    temp_str += "mu: ", str(mu) + "\n"
+    temp_str += "gamma_I: ", str(gamma_I) + "\n"
+    temp_str += "gamma_A: ", str(gamma_A) + "\n"
+    temp_str += "gamma_Aq: ", str(gamma_Aq) + "\n"
+    temp_str += "chi: ", str(chi) + "\n"
+    temp_str += "N_e: ", str(N_e) + "\n"
+    temp_str += "z_1: ", str(z_1) + "\n"
+    temp_str += "z_2: ", str(z_2) + "\n"
+    temp_str += "a: ", str(a) + "\n"
+    temp_str += "b: ", str(b) + "\n"
     log_file.writelines(temp_str)
 
 
@@ -399,9 +343,9 @@ def start_GA():
     log_file_name += str(hour) + '_' + str(minute)
 
     ea.trcplot(obj_trace, [['种群个体平均目标函数值', '种群最优个体目标函数值']],
-               save_path="./img/track"+log_file_name+' ')  # 绘制图像
+               save_path="../img/track"+log_file_name+' ')  # 绘制图像
 
-    with open("./log/" + log_file_name + ".txt", mode='w', encoding="utf-8") as log_file:
+    with open("../log/" + log_file_name + ".txt", mode='w', encoding="utf-8") as log_file:
         write_param(log_file)
         temp_str = '最优解的目标函数值：' + str(obj_trace[best_gen, 1])
         print(temp_str)
