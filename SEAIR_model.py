@@ -152,7 +152,7 @@ b = 5
 params = [rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_A, gamma_Aq, eta, mu, chi, N_e, z_1, z_2, a, b]
 
 
-sol = odeint(model, y0, t,
+"""sol = odeint(model, y0, t,
              args=(rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_A, gamma_Aq, eta, mu, chi, N_e, z_1, z_2, a, b))
 
 # popt, pcov = scipy.optimize.curve_fit(model, t, ydata)
@@ -172,7 +172,7 @@ plt.plot(t, sub_data.now_asy, 'r', label='Real_Asy_q')
 plt.plot(t, sol[:, 6], '--y', label='Pre_Removed_q')
 plt.plot(t, sub_data.heal, 'y', label='Real_Removed_q')
 # plt.plot(t, sol[:, 7], 'y', label='Removed')
-
+"""
 
 """# plt.plot(sub_data.date,  # x轴数据
 #          sub_data.now_confirm,  # y轴数据

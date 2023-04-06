@@ -43,11 +43,12 @@ def calc_days(start, end):
     return (end_date - start_date).days
 
 
+model_name = "SEAIR"
 file_path = "./CN_COVID_data/domestic_data.csv"
 region = "上海"
 start_date = "2022-03-10"
 end_date = "2022-04-17"
-days = calc_days(start_date, end_date)-2
+days = calc_days(start_date, end_date) - 2
 
 round = 1
 
@@ -179,14 +180,14 @@ FieldD = ea.crtfld(Encoding, varTypes, ranges, borders, precisions, codes, scale
 
 """ ===========遗传算法参数设置==========="""
 NIND = 100  # 种群个体数目
-MAXGEN = 700  # 最大遗传代数
+MAXGEN = 5  # 最大遗传代数
 maxormins = np.array([1])  # 1：目标函数最小化，-1：目标函数最大化
 select_style = 'rws'  # 轮盘赌选择
 rec_style = 'xovdp'  # 两点交叉
 mut_style = 'mutbin'  # 二进制染色体的变异算子
 Lind = int(np.sum(FieldD[0, :]))  # 染色体长度
-pc = 0.5    # 交叉概率
-pm = 1 / Lind   # 变异概率
+pc = 0.5  # 交叉概率
+pm = 1 / Lind  # 变异概率
 obj_trace = np.zeros((MAXGEN, 2))
 var_trace = np.zeros((MAXGEN, int(Lind)))
 
@@ -240,7 +241,7 @@ def model_2(y, t, rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_A, gamma
     return [dE, dE_q, dI, dI_q, dA, dA_q, dR_1, dR_2]
 
 
-def plot_graph(rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A, gamma_Aq, chi, N_e, z_1, z_2, a, b):
+def plot_graph(file_name, rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A, gamma_Aq, chi, N_e, z_1, z_2, a, b):
     sol = odeint(model, y0, t, args=(rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_A, gamma_Aq, eta, mu, chi,
                                      N_e, z_1, z_2, a, b))
     # sol = odeint(model_2, y0, t, args=(rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_A, gamma_Aq, gamma_Iq,
@@ -254,8 +255,9 @@ def plot_graph(rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A,
     plt.legend(loc='best')
     plt.xlabel('t')
     plt.grid()
+    plt.savefig("./img/pic-"+file_name+".png")
     plt.show()
-    plt.savefig("./img/pic-{}.png".format(round))
+    # plt.savefig("./img/pic-{}.png".format(round))
 
 
 def mse_loss(x: np.ndarray, y: np.ndarray):
@@ -264,6 +266,16 @@ def mse_loss(x: np.ndarray, y: np.ndarray):
     assert len(x) == len(y)
     loss = np.sum(np.square(x - y)) / len(x)
     return loss
+
+
+def rmse_loss(x: np.ndarray, y: np.ndarray):
+    assert len(x) == len(y)
+    loss = np.sqrt(np.sum(np.square(x - y)) / len(x))
+    return loss
+
+
+def loss_eva(function, x: np.ndarray, y: np.ndarray):
+    return function(x, y)
 
 
 # 种群染色体矩阵(Chrom)
@@ -281,10 +293,6 @@ def aim(Phen, CV):
     mu = Phen[:, [7]]
     gamma_I = Phen[:, [8]]
     gamma_A = Phen[:, [9]]
-    # gamma_Iq = Phen[:, [10]]
-    # print(len(gamma_Aq))
-    # print(gamma_Aq)
-    # print(Phen)
     f = []
 
     for rho_x, phi_x, beta_x, epsilon_x, alpha_x, eta_x, theta_x, mu_x, gamma_I_x, gamma_A_x in \
@@ -298,9 +306,9 @@ def aim(Phen, CV):
         A_q = sol[:, 5]
         R_q = sol[:, 6]
 
-        loss1 = mse_loss(I_q, y_data.now_confirm.to_numpy())
-        loss2 = mse_loss(A_q, y_data.now_asy.to_numpy())
-        loss3 = mse_loss(R_q, y_data.heal.to_numpy())
+        loss1 = loss_eva(rmse_loss, I_q, y_data.now_confirm.to_numpy())
+        loss2 = loss_eva(rmse_loss, A_q, y_data.now_asy.to_numpy())
+        loss3 = loss_eva(rmse_loss, R_q, y_data.heal.to_numpy())
         loss = np.mean([loss1, loss2, loss3])
         # loss = np.mean([loss1, loss3])
         f.append([loss])
@@ -376,12 +384,24 @@ def start_GA():
         print(ObjV[best_ind])
     # 进化完成
     end_time = time.time()  # 结束计时
-    ea.trcplot(obj_trace, [['种群个体平均目标函数值', '种群最优个体目标函数值']])  # 绘制图像
 
     """============================输出结果============================"""
     best_gen = np.argmin(obj_trace[:, [1]])
     print("最优解代数：", best_gen)
-    with open("./log.txt", mode='a') as log_file:
+
+    temp_t = time.localtime()
+    hour = temp_t.tm_hour
+    minute = temp_t.tm_min
+    log_file_name = model_name + '-'
+    log_file_name += region + '-'
+    log_file_name += str(MAXGEN) + '-'
+    log_file_name += str(int(obj_trace[best_gen, 1])) + '-'
+    log_file_name += str(hour) + '_' + str(minute)
+
+    ea.trcplot(obj_trace, [['种群个体平均目标函数值', '种群最优个体目标函数值']],
+               save_path="./img/track"+log_file_name+' ')  # 绘制图像
+
+    with open("./log/" + log_file_name + ".txt", mode='w', encoding="utf-8") as log_file:
         write_param(log_file)
         temp_str = '最优解的目标函数值：' + str(obj_trace[best_gen, 1])
         print(temp_str)
@@ -396,11 +416,11 @@ def start_GA():
         log_file.writelines("\n")
         print('用时：', end_time - start_time, '秒')
 
-    plot_graph(variable[0, 0], variable[0, 1], variable[0, 2], variable[0, 3], variable[0, 4], variable[0, 5],
-               variable[0, 6], variable[0, 7], variable[0, 8], variable[0, 9], gamma_Aq, chi, N_e[region], z_1, z_2,
-               a, b)
+    plot_graph(log_file_name, variable[0, 0], variable[0, 1], variable[0, 2], variable[0, 3], variable[0, 4],
+               variable[0, 5], variable[0, 6], variable[0, 7], variable[0, 8], variable[0, 9], gamma_Aq, chi,
+               N_e[region], z_1, z_2, a, b)
 
 
 for i in range(1, 6):
-    gamma_Aq = i*0.01
+    gamma_Aq = i * 0.01
     start_GA()
