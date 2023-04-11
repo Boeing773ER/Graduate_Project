@@ -1,42 +1,17 @@
 import _io
+import io
 import math
 import numpy as np
+import pandas as pd
 from scipy.integrate import odeint
 import matplotlib.pyplot as plt
 import geatpy as ea
 import time
 from functions import calc_days, read_file, loss_eva, rmse_loss, mse_loss
 
-"""
-ρ rho       被隔离的易感者的比例 0.1 ∼ 0.95 Yes
-ϕ phi       传染性个体通过接触传播的概率 10^−6 ∼ 10^−3 Yes
-β beta      无症状感染者相对于感染者的传播系数 0.1 ∼ 0.9 Yes
-ε epsilon   暴露的个体相对于感染性个体的传播系数 0.1 ∼ 0.9 Yes
-α alpha     暴露的个人发展为感染性状态的比率 0.1 ∼ 1 Yes
-η eta       暴露者发展到有症状的感染状态的比例0.2 ∼ 0.95 Yes
-θ theta     有症状的传染病人的隔离率 0.1 ∼ 0.95 Yes
-µ mu        无症状感染者的检测率 0 ∼ 1 Yes
-γI gamma_I  (未经检疫和有明显症状的)传染病人的清除率0 ∼ 1 Yes
-γA gamma_A  未经检疫的无症状携带者和未发现的轻度携带者的清除率 0 ∼ 1 Yes
-γIq(t)      有明显症状的被隔离传染者的清除率（= z1 + z2 tanh( t-a/b)） 0 ∼ 1 Yes
-γAq gamma_Aq检测到的无症状携带者和检测到的轻度携带者的去除率 0 ∼ 1 Yes
-χ chi       检测到的无症状携带者是否被算作确诊病例的二元指标 {0, 1} No
 
-dE/dt = (1 - rho) * phi * (I + epsilon * E + beta * A) * (N_e - E - E_q - I - I_q - A - A_q - R_1 - R_2) - alpha * E
-dE_q/dt = rho * phi * (I + epsilon * E + beta * A) * (N_e - E - E_q - I - I_q - A - A_q - R_1 - R_2) - alpha * E_q
-dI/dt = alpha * eta * E - theta * I - gamma_I * I
-dI_q/dt = alpha * eta * E_q + theta * I - gamma_Iq(t) * I_q
-dA/dt = alpha * (1 - eta) * E - mu * A - gamma_A * A
-dA_q/dt = alpha * (1 - eta) * E_q + mu * A - gamma_Aq * A_q
-dR_1/dt = gamma_Iq(t) * I_q + chi * gamma_Aq * A_q
-dR_2/dt = gamma_A * A + gamma_I * I + (1 - chi) * gamma_Aq * A_q
-
-gamma_Iq(t) = z_1 + z_2 * tanh((t - a)/b)
-"""
-
-
-model_name = "SEAIR"
-file_path = "../CN_COVID_data/domestic_data.csv"
+model_name = "SEIR"
+file_path = "./CN_COVID_data/domestic_data.csv"
 region = "上海"
 start_date = "2022-03-10"
 end_date = "2022-04-17"
@@ -60,68 +35,15 @@ gamma_A = 1e-4
 gamma_Aq = 0.03
 # gamma_Iq = 0.05
 chi = 0
-N_e = {}
-N_e["上海"] = 2.489e7
-N_e["湖北"] = 5.830e7
+N_e = {"上海": 2.489e7, "湖北": 5.830e7}
 z_1 = 0.045
 z_2 = 0.026
 a = 28
 b = 5
 
-# rho = 0.7
-# phi = 0.001
-# beta = 0.06927913080632363
-# epsilon = 0.9621558933040346
-# alpha = 0.03967527314899591
-# eta = 0.27186717939327354
-# theta = 0.5458096807666484
-# mu = 0.003784410669596533
-# gamma_I = 0.759506805835317
-# gamma_A = 0.0610999206494537
-# gamma_Aq = 0.05
-# gamma_Iq = 0.05
-# chi = 1
-# N_e = 2.489e7
-# z_1 = 0.045
-# z_2 = 0.026
-# a = 28
-# b = 5
-
-
-# gamma_Iq = z_1 + z_2 * math.tanh((10 - a) / b)
-
-
-# rho = 0.5
-# phi = 0.5
-# beta = 0.5
-# epsilon = 0.5
-# alpha = 0.5
-# eta = 0.5
-# theta = 0.5
-# mu = 0.5
-# gamma_I = 0.5
-# gamma_A = 0.5
-# gamma_Aq = 0.5
-# # gamma_Iq = 0.05
-# chi = 0
-# N_e = 2.489e7
-# z_1 = 0.045
-# z_2 = 0.026
-# a = 28
-# b = 5
 
 """ ===========变量设置==========="""
 params_count = 10
-# x1 = [0.1, 0.95]
-# x2 = [1e-6, 1e-3]  # 第一个决策变量范围
-# x3 = [0.1, 0.9]
-# x4 = [0.1, 0.9]
-# x5 = [0.1, 1]
-# x6 = [0.2, 0.95]
-# x7 = [0.1, 0.95]
-# x8 = [0, 1]
-# x9 = [0, 1]
-# x10 = [0, 1]
 x1 = [0, 1]
 x2 = [0, 1]  # 第一个决策变量范围
 x3 = [0, 1]
@@ -132,8 +54,7 @@ x7 = [0, 1]
 x8 = [0, 1]
 x9 = [0, 1]
 x10 = [0, 1]
-# x11 = [0, 1]
-# x12 = [0, 1]
+
 b1 = [1, 1]  # 第一个决策变量边界，1表示包含范围的边界，0表示不包含
 b2 = [1, 1]
 b3 = [1, 1]
@@ -144,8 +65,7 @@ b7 = [1, 1]
 b8 = [1, 1]
 b9 = [1, 1]
 b10 = [1, 1]
-b11 = [1, 1]
-b12 = [1, 1]
+
 
 ranges = np.vstack([x1, x2, x3, x4, x5, x6, x7, x8, x9, x10]).T  # 生成自变量的范围矩阵，使得第一行为所有决策变量的下界，第二行为上界
 borders = np.vstack([b1, b2, b3, b4, b5, b6, b7, b8, b9, b10]).T  # 生成自变量的边界矩阵
@@ -187,28 +107,9 @@ var_trace = np.zeros((MAXGEN, int(Lind)))
 y_data = read_file(file_path, region, start_date, end_date)
 
 
-def model(y, t, rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_A, gamma_Aq, eta, mu, chi, N_e, z_1, z_2, a, b):
-    E, E_q, I, I_q, A, A_q, R_1, R_2 = y
+def model(y, t, rho, phi, epsilon, beta, alpha, theta, gamma_A, gamma_I, gamma_Aq, gamma_Iq, eta, mu, chi, N_e):
+    I, I_q, A, A_q, R_1, R_2 = y
 
-    gamma_Iq = z_1 + z_2 * math.tanh((t - a) / b)
-
-    dE = (1 - rho) * phi * (I + epsilon * E + beta * A) * (N_e - E - E_q - I - I_q - A - A_q - R_1 - R_2) - alpha * E
-    dE_q = rho * phi * (I + epsilon * E + beta * A) * (N_e - E - E_q - I - I_q - A - A_q - R_1 - R_2) - alpha * E_q
-    dI = alpha * eta * E - theta * I - gamma_I * I
-    dI_q = alpha * eta * E_q + theta * I - gamma_Iq * I_q
-    dA = alpha * (1 - eta) * E - mu * A - gamma_A * A
-    dA_q = alpha * (1 - eta) * E_q + mu * A - gamma_Aq * A_q
-    dR_1 = gamma_Iq * I_q + chi * gamma_Aq * A_q
-    dR_2 = gamma_A * A + gamma_I * I + (1 - chi) * gamma_Aq * A_q
-
-    return [dE, dE_q, dI, dI_q, dA, dA_q, dR_1, dR_2]
-
-
-def model_2(y, t, rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_A, gamma_Aq, gamma_Iq, eta, mu, chi, N_e):
-    E, E_q, I, I_q, A, A_q, R_1, R_2 = y
-
-    dE = (1 - rho) * phi * (I + epsilon * E + beta * A) * (N_e - E - E_q - I - I_q - A - A_q - R_1 - R_2) - alpha * E
-    dE_q = rho * phi * (I + epsilon * E + beta * A) * (N_e - E - E_q - I - I_q - A - A_q - R_1 - R_2) - alpha * E_q
     dI = alpha * eta * E - theta * I - gamma_I * I
     dI_q = alpha * eta * E_q + theta * I - gamma_Iq * I_q
     dA = alpha * (1 - eta) * E - mu * A - gamma_A * A
@@ -233,9 +134,10 @@ def plot_graph(file_name, rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_
     plt.legend(loc='best')
     plt.xlabel('t')
     plt.grid()
-    plt.savefig("../img/pic-"+file_name+".png")
+    plt.savefig("./img/pic-"+file_name+".png")
     plt.show()
-    # plt.savefig("../img/pic-{}.png".format(round))
+    # plt.savefig("./img/pic-{}.png".format(round))
+
 
 
 # 种群染色体矩阵(Chrom)
@@ -260,8 +162,6 @@ def aim(Phen, CV):
         # 计算目标函数值
         sol = odeint(model, y0, t, args=(rho_x, phi_x, epsilon_x, beta_x, alpha_x, theta_x,
                                          gamma_I_x, gamma_A_x, gamma_Aq, eta_x, mu_x, chi, N_e[region], z_1, z_2, a, b))
-        # sol = odeint(model_2, y0, t, args=(rho_x, phi_x, epsilon_x, beta_x, alpha_x, theta_x, gamma_I_x, gamma_A_x,
-        #                                  gamma_Aq, gamma_Iq_x, eta_x, mu_x, chi, N_e))
         I_q = sol[:, 3]
         A_q = sol[:, 5]
         R_q = sol[:, 6]
@@ -343,9 +243,9 @@ def start_GA():
     log_file_name += str(hour) + '_' + str(minute)
 
     ea.trcplot(obj_trace, [['种群个体平均目标函数值', '种群最优个体目标函数值']],
-               save_path="../img/track"+log_file_name+' ')  # 绘制图像
+               save_path="./img/track"+log_file_name+' ')  # 绘制图像
 
-    with open("../log/" + log_file_name + ".txt", mode='w', encoding="utf-8") as log_file:
+    with open("./log/" + log_file_name + ".txt", mode='w', encoding="utf-8") as log_file:
         write_param(log_file)
         temp_str = '最优解的目标函数值：' + str(obj_trace[best_gen, 1])
         print(temp_str)
