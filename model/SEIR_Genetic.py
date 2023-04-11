@@ -174,7 +174,7 @@ FieldD = ea.crtfld(Encoding, varTypes, ranges, borders, precisions, codes, scale
 
 """ ===========遗传算法参数设置==========="""
 NIND = 100  # 种群个体数目
-MAXGEN = 5  # 最大遗传代数
+MAXGEN = 500  # 最大遗传代数
 maxormins = np.array([1])  # 1：目标函数最小化，-1：目标函数最大化
 select_style = 'rws'  # 轮盘赌选择
 rec_style = 'xovdp'  # 两点交叉
@@ -273,23 +273,24 @@ def aim(Phen, CV):
 
 def write_param(log_file: _io.TextIOWrapper):
     log_file.writelines(region)
-    temp_str = "rho: " + str(rho) + "\n"
-    temp_str += "phi: ", str(phi) + "\n"
-    temp_str += "beta: ", str(beta) + "\n"
-    temp_str += "epsilon: ", str(epsilon) + "\n"
-    temp_str += "alpha: ", str(alpha) + "\n"
-    temp_str += "eta: ", str(eta) + "\n"
-    temp_str += "theta: ", str(theta) + "\n"
-    temp_str += "mu: ", str(mu) + "\n"
-    temp_str += "gamma_I: ", str(gamma_I) + "\n"
-    temp_str += "gamma_A: ", str(gamma_A) + "\n"
-    temp_str += "gamma_Aq: ", str(gamma_Aq) + "\n"
-    temp_str += "chi: ", str(chi) + "\n"
-    temp_str += "N_e: ", str(N_e) + "\n"
-    temp_str += "z_1: ", str(z_1) + "\n"
-    temp_str += "z_2: ", str(z_2) + "\n"
-    temp_str += "a: ", str(a) + "\n"
-    temp_str += "b: ", str(b) + "\n"
+    temp_str = "\ninit setting:\n"
+    temp_str += "rho: " + str(rho) + "\n"
+    temp_str += "phi: " + str(phi) + "\n"
+    temp_str += "beta: " + str(beta) + "\n"
+    temp_str += "epsilon: " + str(epsilon) + "\n"
+    temp_str += "alpha: " + str(alpha) + "\n"
+    temp_str += "eta: " + str(eta) + "\n"
+    temp_str += "theta: " + str(theta) + "\n"
+    temp_str += "mu: " + str(mu) + "\n"
+    temp_str += "gamma_I: " + str(gamma_I) + "\n"
+    temp_str += "gamma_A: " + str(gamma_A) + "\n"
+    temp_str += "gamma_Aq: " + str(gamma_Aq) + "\n"
+    temp_str += "chi: " + str(chi) + "\n"
+    temp_str += "N_e: " + str(N_e) + "\n"
+    temp_str += "z_1: " + str(z_1) + "\n"
+    temp_str += "z_2: " + str(z_2) + "\n"
+    temp_str += "a: " + str(a) + "\n"
+    temp_str += "b: " + str(b) + "\n"
     log_file.writelines(temp_str)
 
 
@@ -359,6 +360,4 @@ def start_GA():
                N_e[region], z_1, z_2, a, b)
 
 
-for i in range(1, 6):
-    gamma_Aq = i * 0.01
-    start_GA()
+start_GA()
