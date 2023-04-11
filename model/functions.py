@@ -39,4 +39,3 @@ def rmse_loss(x: np.ndarray, y: np.ndarray):
 
 def loss_eva(function, x: np.ndarray, y: np.ndarray):
     return function(x, y)
-

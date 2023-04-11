@@ -155,6 +155,7 @@ def plot_graph(file_name, rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_
     plt.grid()
     plt.savefig("../img/pic-"+file_name+".png")
     plt.show()
+    return sol
 
 
 # 种群染色体矩阵(Chrom)
@@ -254,13 +255,14 @@ def start_GA():
     print("最优解代数：", best_gen)
 
     temp_t = time.localtime()
+    day = temp_t.tm_mday
     hour = temp_t.tm_hour
     minute = temp_t.tm_min
     log_file_name = model_name + '-'
     log_file_name += region + '-'
     log_file_name += str(MAXGEN) + '-'
     log_file_name += str(int(obj_trace[best_gen, 1])) + '-'
-    log_file_name += str(hour) + '_' + str(minute)
+    log_file_name += str(day) + '_' + str(hour) + '_' + str(minute)
 
     ea.trcplot(obj_trace, [['种群个体平均目标函数值', '种群最优个体目标函数值']],
                save_path="../img/track"+log_file_name+' ')  # 绘制图像
@@ -282,9 +284,12 @@ def start_GA():
         log_file.writelines("\n")
         print('用时：', end_time - start_time, '秒')
 
-    plot_graph(log_file_name, variable[0, 0], variable[0, 1], variable[0, 2], variable[0, 3], variable[0, 4],
-               variable[0, 5], variable[0, 6], variable[0, 7], variable[0, 8], variable[0, 9], variable[0, 10],
-               variable[0, 11], chi, N_e[region])
+    sol = plot_graph(log_file_name, variable[0, 0], variable[0, 1], variable[0, 2], variable[0, 3], variable[0, 4],
+                     variable[0, 5], variable[0, 6], variable[0, 7], variable[0, 8], variable[0, 9], variable[0, 10],
+                     variable[0, 11], chi, N_e[region])
+    np.savetxt("../log/" + log_file_name + ".csv", sol, delimiter=',', header="E, Eq, I, Iq, A, Aq, R1, R2",
+               comments="")
 
 
-start_GA()
+for i in range(10):
+    start_GA()
