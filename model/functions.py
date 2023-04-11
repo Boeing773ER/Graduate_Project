@@ -1,6 +1,7 @@
 import datetime as dt
 import numpy as np
 import pandas as pd
+from matplotlib import pyplot as plt
 
 
 def calc_days(start, end):
@@ -39,3 +40,18 @@ def rmse_loss(x: np.ndarray, y: np.ndarray):
 
 def loss_eva(function, x: np.ndarray, y: np.ndarray):
     return function(x, y)
+
+
+def plot_graph(file_name, sol, model_name, region, t, y_data):
+    plt.title(model_name + "COVID " + region)
+    plt.plot(t, sol[:, 3], '--g', label='Pre_Inf_q')
+    plt.plot(t, y_data.now_confirm, 'g', label='Real_Inf_q')
+    plt.plot(t, sol[:, 5], '--r', label='Pre_Asy_q')
+    plt.plot(t, y_data.now_asy, 'r', label='Real_Asy_q')
+    plt.plot(t, sol[:, 6], '--y', label='Pre_Removed_q')
+    plt.plot(t, y_data.heal, 'y', label='Real_Removed_q')
+    plt.legend(loc='best')
+    plt.xlabel('t')
+    plt.grid()
+    plt.savefig("../img/pic-"+file_name+".png")
+    plt.show()

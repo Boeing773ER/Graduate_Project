@@ -5,7 +5,7 @@ from scipy.integrate import odeint
 import matplotlib.pyplot as plt
 import geatpy as ea
 import time
-from functions import calc_days, read_file, loss_eva, rmse_loss, mse_loss
+from functions import calc_days, read_file, loss_eva, rmse_loss, mse_loss, plot_graph
 
 """
 ρ rho       被隔离的易感者的比例 0.1 ∼ 0.95 Yes
@@ -174,7 +174,7 @@ FieldD = ea.crtfld(Encoding, varTypes, ranges, borders, precisions, codes, scale
 
 """ ===========遗传算法参数设置==========="""
 NIND = 100  # 种群个体数目
-MAXGEN = 500  # 最大遗传代数
+MAXGEN = 1000  # 最大遗传代数
 maxormins = np.array([1])  # 1：目标函数最小化，-1：目标函数最大化
 select_style = 'rws'  # 轮盘赌选择
 rec_style = 'xovdp'  # 两点交叉
@@ -204,25 +204,6 @@ def model(y, t, rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A
     dR_2 = gamma_A * A + gamma_I * I + (1 - chi) * gamma_Aq * A_q
 
     return dE, dE_q, dI, dI_q, dA, dA_q, dR_1, dR_2
-
-
-def plot_graph(file_name, rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A, gamma_Aq, chi, N_e, z_1, z_2, a, b):
-    sol = odeint(model, y0, t, args=(rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_A, gamma_Aq, eta, mu, chi,
-                                     N_e, z_1, z_2, a, b))
-    # sol = odeint(model_2, y0, t, args=(rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_A, gamma_Aq, gamma_Iq,
-    #                                  eta, mu, chi, N_e))
-    plt.plot(t, sol[:, 3], '--g', label='Pre_Inf_q')
-    plt.plot(t, y_data.now_confirm, 'g', label='Real_Inf_q')
-    plt.plot(t, sol[:, 5], '--r', label='Pre_Asy_q')
-    plt.plot(t, y_data.now_asy, 'r', label='Real_Asy_q')
-    plt.plot(t, sol[:, 6], '--y', label='Pre_Removed_q')
-    plt.plot(t, y_data.heal, 'y', label='Real_Removed_q')
-    plt.legend(loc='best')
-    plt.xlabel('t')
-    plt.grid()
-    plt.savefig("../img/pic-"+file_name+".png")
-    plt.show()
-    return sol
 
 
 # 种群染色体矩阵(Chrom)
@@ -356,11 +337,13 @@ def start_GA():
         log_file.writelines("\n")
         print('用时：', end_time - start_time, '秒')
 
-    sol = plot_graph(log_file_name, variable[0, 0], variable[0, 1], variable[0, 2], variable[0, 3], variable[0, 4],
-                     variable[0, 5], variable[0, 6], variable[0, 7], variable[0, 8], variable[0, 9], gamma_Aq, chi,
-                     N_e[region], z_1, z_2, a, b)
+    sol = odeint(model, y0, t, args=(rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_A, gamma_Aq, eta, mu, chi,
+                                     N_e[region], z_1, z_2, a, b))
+    # 绘制预测折线图
+    plot_graph(log_file_name, sol, model_name, region, t, y_data)
+    # 保存数据值csv
     np.savetxt("../log/"+log_file_name+".csv", sol, delimiter=',', header="E, Eq, I, Iq, A, Aq, R1, R2", comments="")
 
 
-for i in range(10):
+for i in range(20):
     start_GA()
