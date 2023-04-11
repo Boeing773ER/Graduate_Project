@@ -34,7 +34,7 @@ gamma_Iq(t) = z_1 + z_2 * tanh((t - a)/b)
 """
 
 
-model_name = "SEIR_V_test"
+model_name = "SEIR_V"
 file_path = "../CN_COVID_data/domestic_data.csv"
 region = "上海"
 start_date = "2022-03-10"
@@ -111,7 +111,7 @@ FieldD = ea.crtfld(Encoding, varTypes, ranges, borders, precisions, codes, scale
 
 """ ===========遗传算法参数设置==========="""
 NIND = 100  # 种群个体数目
-MAXGEN = 5  # 最大遗传代数
+MAXGEN = 500  # 最大遗传代数
 maxormins = np.array([1])  # 1：目标函数最小化，-1：目标函数最大化
 select_style = 'rws'  # 轮盘赌选择
 rec_style = 'xovdp'  # 两点交叉

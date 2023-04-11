@@ -35,14 +35,13 @@ gamma_Iq(t) = z_1 + z_2 * tanh((t - a)/b)
 """
 
 
-model_name = "SEAIR"
+model_name = "SEAIR_test"
 file_path = "../CN_COVID_data/domestic_data.csv"
 region = "上海"
 start_date = "2022-03-10"
 end_date = "2022-04-17"
 days = calc_days(start_date, end_date) - 2
 
-round = 1
 
 y0 = [0, 0, 1, 0, 0, 0, 0, 0]
 t = np.linspace(0, days, days + 1)
@@ -58,7 +57,6 @@ mu = 0.2
 gamma_I = 7e-4
 gamma_A = 1e-4
 gamma_Aq = 0.03
-# gamma_Iq = 0.05
 chi = 0
 N_e = {"上海": 2.489e7, "湖北": 5.830e7}
 z_1 = 0.045
@@ -109,7 +107,7 @@ b = 5
 # b = 5
 
 """ ===========变量设置==========="""
-params_count = 10
+params_count = 15
 # x1 = [0.1, 0.95]
 # x2 = [1e-6, 1e-3]  # 第一个决策变量范围
 # x3 = [0.1, 0.9]
@@ -130,8 +128,12 @@ x7 = [0, 1]
 x8 = [0, 1]
 x9 = [0, 1]
 x10 = [0, 1]
-# x11 = [0, 1]
-# x12 = [0, 1]
+x11 = [0, 1]
+x12 = [0, 1]
+x13 = [0, 1]
+x14 = [0, 100]
+x15 = [0, 10]
+
 b1 = [1, 1]  # 第一个决策变量边界，1表示包含范围的边界，0表示不包含
 b2 = [1, 1]
 b3 = [1, 1]
@@ -144,27 +146,29 @@ b9 = [1, 1]
 b10 = [1, 1]
 b11 = [1, 1]
 b12 = [1, 1]
+b13 = [1, 1]
+b14 = [1, 1]
+b15 = [1, 1]
 
-ranges = np.vstack([x1, x2, x3, x4, x5, x6, x7, x8, x9, x10]).T  # 生成自变量的范围矩阵，使得第一行为所有决策变量的下界，第二行为上界
-borders = np.vstack([b1, b2, b3, b4, b5, b6, b7, b8, b9, b10]).T  # 生成自变量的边界矩阵
-# varTypes = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])  # 决策变量的类型，0表示连续，1表示离散
+ranges = np.vstack([x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15]).T  # 生成自变量的范围矩阵，使得第一行为所有决策变量的下界，第二行为上界
+borders = np.vstack([b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15]).T  # 生成自变量的边界矩阵
 varTypes = np.array(np.zeros(params_count))  # 决策变量的类型，0表示连续，1表示离散
+# varTypes = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])  # 决策变量的类型，0表示连续，1表示离散
 # ranges = np.vstack([x1, x2, x3, x4, x5, x6]).T  # 生成自变量的范围矩阵，使得第一行为所有决策变量的下界，第二行为上界
 # borders = np.vstack([b1, b2, b3, b4, b5, b6]).T  # 生成自变量的边界矩阵
 # varTypes = np.array([0, 0, 0, 0, 0, 0])  # 决策变量的类型，0表示连续，1表示离散
 
 """ ===========染色体编码设置==========="""
 Encoding = 'BG'  # 表示采用“实整数编码”，即变量可以是连续的也可以是离散的
-# codes = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # 决策变量的编码方式，0表示决策变量使用二进制编码
 codes = np.zeros(params_count)  # 决策变量的编码方式，0表示决策变量使用二进制编码
 precisions = []
 for i in range(params_count):
     precisions.append(4)  # 决策变量的编码精度，表示二进制编码串解码后能表示的决策变量的精度可达到小数点后6位
-# scales = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # 0表示采用算术刻度，1表示采用对数刻度
 scales = np.zeros(params_count)  # 0表示采用算术刻度，1表示采用对数刻度
-# codes = [0, 0, 0, 0, 0, 0]  # 决策变量的编码方式，设置两个0表示两个决策变量均使用二进制编码
+# codes = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # 决策变量的编码方式，0表示决策变量使用二进制编码
+# scales = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # 0表示采用算术刻度，1表示采用对数刻度
 # precisions = [4, 4, 4, 4, 4, 4]  # 决策变量的编码精度，表示二进制编码串解码后能表示的决策变量的精度可达到小数点后6位
-# scales = [0, 0, 0, 0, 0, 0]  # 0表示采用算术刻度，1表示采用对数刻度
+
 
 FieldD = ea.crtfld(Encoding, varTypes, ranges, borders, precisions, codes, scales)
 
@@ -185,7 +189,7 @@ var_trace = np.zeros((MAXGEN, int(Lind)))
 y_data = read_file(file_path, region, start_date, end_date)
 
 
-def model(y, t, rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_A, gamma_Aq, eta, mu, chi, N_e, z_1, z_2, a, b):
+def model(y, t, rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A, gamma_Aq, chi, N_e, z_1, z_2, a, b):
     E, E_q, I, I_q, A, A_q, R_1, R_2 = y
 
     gamma_Iq = z_1 + z_2 * math.tanh((t - a) / b)
@@ -199,20 +203,7 @@ def model(y, t, rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_A, gamma_A
     dR_1 = gamma_Iq * I_q + chi * gamma_Aq * A_q
     dR_2 = gamma_A * A + gamma_I * I + (1 - chi) * gamma_Aq * A_q
 
-    return [dE, dE_q, dI, dI_q, dA, dA_q, dR_1, dR_2]
-# def model_2(y, t, rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_A, gamma_Aq, gamma_Iq, eta, mu, chi, N_e):
-#     E, E_q, I, I_q, A, A_q, R_1, R_2 = y
-#
-#     dE = (1 - rho) * phi * (I + epsilon * E + beta * A) * (N_e - E - E_q - I - I_q - A - A_q - R_1 - R_2) - alpha * E
-#     dE_q = rho * phi * (I + epsilon * E + beta * A) * (N_e - E - E_q - I - I_q - A - A_q - R_1 - R_2) - alpha * E_q
-#     dI = alpha * eta * E - theta * I - gamma_I * I
-#     dI_q = alpha * eta * E_q + theta * I - gamma_Iq * I_q
-#     dA = alpha * (1 - eta) * E - mu * A - gamma_A * A
-#     dA_q = alpha * (1 - eta) * E_q + mu * A - gamma_Aq * A_q
-#     dR_1 = gamma_Iq * I_q + chi * gamma_Aq * A_q
-#     dR_2 = gamma_A * A + gamma_I * I + (1 - chi) * gamma_Aq * A_q
-#
-#     return [dE, dE_q, dI, dI_q, dA, dA_q, dR_1, dR_2]
+    return dE, dE_q, dI, dI_q, dA, dA_q, dR_1, dR_2
 
 
 def plot_graph(file_name, rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A, gamma_Aq, chi, N_e, z_1, z_2, a, b):
@@ -249,15 +240,22 @@ def aim(Phen, CV):
     mu = Phen[:, [7]]
     gamma_I = Phen[:, [8]]
     gamma_A = Phen[:, [9]]
+    gamma_Aq = Phen[:, [10]]
+    z_1 = Phen[:, [11]]
+    z_2 = Phen[:, [12]]
+    a = Phen[:, [13]]
+    b = Phen[:, [14]]
     f = []
 
-    for rho_x, phi_x, beta_x, epsilon_x, alpha_x, eta_x, theta_x, mu_x, gamma_I_x, gamma_A_x in \
-            zip(rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A):
+    # rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A, gamma_Aq, chi, N_e, z_1, z_2, a, b
+
+    for rho_x, phi_x, beta_x, epsilon_x, alpha_x, eta_x, theta_x, mu_x, gamma_I_x, gamma_A_x, gamma_Aq_x, z_1_x, z_2_x, \
+        a_x, b_x in zip(rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A, gamma_Aq, z_1, z_2, a, b):
         # 计算目标函数值
-        sol = odeint(model, y0, t, args=(rho_x[0], phi_x[0], epsilon_x[0], beta_x[0], alpha_x[0], theta_x[0],
-                                         gamma_I_x[0], gamma_A_x[0], gamma_Aq[0], eta_x[0], mu_x[0], chi, N_e[region], z_1, z_2, a, b))
-        # sol = odeint(model_2, y0, t, args=(rho_x, phi_x, epsilon_x, beta_x, alpha_x, theta_x, gamma_I_x, gamma_A_x,
-        #                                  gamma_Aq, gamma_Iq_x, eta_x, mu_x, chi, N_e))
+        sol = odeint(model, y0, t, args=(rho_x[0], phi_x[0], beta_x[0], epsilon_x[0], alpha_x[0], eta_x[0], theta_x[0],
+                                         mu_x[0], gamma_I_x[0], gamma_A_x[0], gamma_Aq[0], chi, N_e[region], z_1[0],
+                                         z_2[0], a[0], b[0]))
+
         I_q = sol[:, 3]
         A_q = sol[:, 5]
         R_q = sol[:, 6]
