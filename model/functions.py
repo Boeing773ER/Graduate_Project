@@ -42,13 +42,13 @@ def loss_eva(function, x: np.ndarray, y: np.ndarray):
     return function(x, y)
 
 
-def plot_graph(file_name, sol, model_name, region, t, y_data):
+def plot_graph(file_name, sol, model_name, region, t, y_data, num):
     plt.title(model_name + "COVID " + region)
-    plt.plot(t, sol[:, 3], '--g', label='Pre_Inf_q')
+    plt.plot(t, sol[:, num[0]], '--g', label='Pre_Inf_q')
     plt.plot(t, y_data.now_confirm, 'g', label='Real_Inf_q')
-    plt.plot(t, sol[:, 5], '--r', label='Pre_Asy_q')
+    plt.plot(t, sol[:, num[1]], '--r', label='Pre_Asy_q')
     plt.plot(t, y_data.now_asy, 'r', label='Real_Asy_q')
-    plt.plot(t, sol[:, 6], '--y', label='Pre_Removed_q')
+    plt.plot(t, sol[:, num[2]], '--y', label='Pre_Removed_q')
     plt.plot(t, y_data.heal, 'y', label='Real_Removed_q')
     plt.legend(loc='best')
     plt.xlabel('t')

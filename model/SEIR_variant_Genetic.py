@@ -270,7 +270,7 @@ def start_GA():
     sol = odeint(model, y0, t, args=(rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A, gamma_Aq,
                                      gamma_Iq, chi, N_e[region]))
 
-    plot_graph(log_file_name, sol, model_name, region, t, y_data)
+    plot_graph(log_file_name, sol, model_name, region, t, y_data, [3, 5, 6])
     np.savetxt("../log/" + log_file_name + ".csv", sol, delimiter=',', header="E, Eq, I, Iq, A, Aq, R1, R2",
                comments="")
 

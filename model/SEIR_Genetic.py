@@ -340,7 +340,7 @@ def start_GA():
     sol = odeint(model, y0, t, args=(rho, phi, epsilon, beta, alpha, theta, gamma_I, gamma_A, gamma_Aq, eta, mu, chi,
                                      N_e[region], z_1, z_2, a, b))
     # 绘制预测折线图
-    plot_graph(log_file_name, sol, model_name, region, t, y_data)
+    plot_graph(log_file_name, sol, model_name, region, t, y_data, [3, 5, 6])
     # 保存数据值csv
     np.savetxt("../log/"+log_file_name+".csv", sol, delimiter=',', header="E, Eq, I, Iq, A, Aq, R1, R2", comments="")
 
