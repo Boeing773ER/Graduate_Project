@@ -117,7 +117,7 @@ select_style = 'rws'  # 轮盘赌选择
 rec_style = 'xovdp'  # 两点交叉
 mut_style = 'mutbin'  # 二进制染色体的变异算子
 Lind = int(np.sum(FieldD[0, :]))  # 染色体长度
-pc = 0.6  # 交叉概率
+pc = 0.7  # 交叉概率
 pm = 1 / Lind  # 变异概率
 obj_trace = np.zeros((MAXGEN, 2))
 var_trace = np.zeros((MAXGEN, int(Lind)))
@@ -179,7 +179,6 @@ def aim(Phen, CV):
         loss = np.mean([loss1, loss2, loss3])
         # loss = np.mean([loss1, loss3])
         f.append([loss])
-        # print(f)
     f = np.array(f)
     return f, CV  # 返回目标函数值矩阵
 
@@ -276,5 +275,4 @@ def start_GA():
                comments="")
 
 
-for i in range(20):
-    start_GA()
+start_GA()
