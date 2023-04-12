@@ -182,7 +182,7 @@ def write_param(log_file: _io.TextIOWrapper):
     log_file.writelines(temp_str)
 
 
-def start_GA():
+def start_GA(iter_round):
     """=========================开始遗传算法进化========================"""
     start_time = time.time()  # 开始计时
     Chrom = ea.crtpc(Encoding, NIND, FieldD)  # 生成种群染色体矩阵
@@ -220,14 +220,14 @@ def start_GA():
     day = temp_t.tm_mday
     hour = temp_t.tm_hour
     minute = temp_t.tm_min
-    log_file_name = model_name + '-'
+    log_file_name = str(iter_round) + '-' + model_name + '-'
     log_file_name += region + '-'
     log_file_name += str(MAXGEN) + '-'
     log_file_name += str(int(obj_trace[best_gen, 1])) + '-'
     log_file_name += str(day) + '_' + str(hour) + '_' + str(minute)
 
     ea.trcplot(obj_trace, [['Average value of population', 'Population optimal individual value']],
-               save_path="../img/track"+log_file_name+' ')  # 绘制图像
+               save_path="../img/track-"+log_file_name+' ')  # 绘制图像
     np.savetxt("../log/obj_trace_" + log_file_name + ".csv", obj_trace, delimiter=',')
 
     with open("../log/" + log_file_name + ".txt", mode='w', encoding="utf-8") as log_file:
@@ -256,4 +256,5 @@ def start_GA():
                comments="")
 
 
-start_GA()
+for i in range(10):
+    start_GA(i)
