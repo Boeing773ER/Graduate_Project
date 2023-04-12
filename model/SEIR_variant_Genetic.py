@@ -267,8 +267,9 @@ def start_GA():
         log_file.writelines("\n")
         print('用时：', end_time - start_time, '秒')
 
-    sol = odeint(model, y0, t, args=(rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A, gamma_Aq,
-                                     gamma_Iq, chi, N_e[region]))
+    sol = odeint(model, y0, t, args=(variable[0, 0], variable[0, 1], variable[0, 2], variable[0, 3], variable[0, 4],
+                                     variable[0, 5], variable[0, 6], variable[0, 7], variable[0, 8], variable[0, 9],
+                                     variable[0, 10], variable[0, 11], chi, N_e[region]))
 
     plot_graph(log_file_name, sol, model_name, region, t, y_data, [3, 5, 6])
     np.savetxt("../log/" + log_file_name + ".csv", sol, delimiter=',', header="E, Eq, I, Iq, A, Aq, R1, R2",
