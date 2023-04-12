@@ -229,12 +229,14 @@ def aim(Phen, CV):
 
     # rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A, gamma_Aq, chi, N_e, z_1, z_2, a, b
 
+    # TODO: 之前参数设置错误，SEAIR的实验数据有误
+
     for rho_x, phi_x, beta_x, epsilon_x, alpha_x, eta_x, theta_x, mu_x, gamma_I_x, gamma_A_x, gamma_Aq_x, z_1_x, z_2_x, \
         a_x, b_x in zip(rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A, gamma_Aq, z_1, z_2, a, b):
         # 计算目标函数值
         sol = odeint(model, y0, t, args=(rho_x[0], phi_x[0], beta_x[0], epsilon_x[0], alpha_x[0], eta_x[0], theta_x[0],
-                                         mu_x[0], gamma_I_x[0], gamma_A_x[0], gamma_Aq[0], chi, N_e[region], z_1[0],
-                                         z_2[0], a[0], b[0]))
+                                         mu_x[0], gamma_I_x[0], gamma_A_x[0], gamma_Aq[0], chi, N_e[region], z_1_x[0],
+                                         z_2_x[0], a_x[0], b_x[0]))
 
         I_q = sol[:, 3]
         A_q = sol[:, 5]
