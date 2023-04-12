@@ -174,7 +174,7 @@ FieldD = ea.crtfld(Encoding, varTypes, ranges, borders, precisions, codes, scale
 
 """ ===========遗传算法参数设置==========="""
 NIND = 100  # 种群个体数目
-MAXGEN = 1000  # 最大遗传代数
+MAXGEN = 5  # 最大遗传代数
 maxormins = np.array([1])  # 1：目标函数最小化，-1：目标函数最大化
 select_style = 'rws'  # 轮盘赌选择
 rec_style = 'xovdp'  # 两点交叉
@@ -184,7 +184,6 @@ pc = 0.5  # 交叉概率
 pm = 1 / Lind  # 变异概率
 obj_trace = np.zeros((MAXGEN, 2))
 var_trace = np.zeros((MAXGEN, int(Lind)))
-
 
 y_data = read_file(file_path, region, start_date, end_date)
 
@@ -321,6 +320,7 @@ def start_GA():
 
     ea.trcplot(obj_trace, [['Average value of population', 'Population optimal individual value']],
                save_path="../img/track"+log_file_name+' ')  # 绘制图像
+    np.savetxt("../log/obj_trace_"+log_file_name+".csv", obj_trace, delimiter=',')
 
     with open("../log/" + log_file_name + ".txt", mode='w', encoding="utf-8") as log_file:
         write_param(log_file)

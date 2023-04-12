@@ -249,6 +249,7 @@ def start_GA():
 
     ea.trcplot(obj_trace, [['Average value of population', 'Population optimal individual value']],
                save_path="../img/track"+log_file_name+' ')  # 绘制图像
+    np.savetxt("../log/obj_trace_" + log_file_name + ".csv", obj_trace, delimiter=',')
 
     with open("../log/" + log_file_name + ".txt", mode='w', encoding="utf-8") as log_file:
         write_param(log_file)
