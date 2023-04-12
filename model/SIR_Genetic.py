@@ -30,7 +30,7 @@ dR_2/dt = gamma_A * A + gamma_I * I
 
 model_name = "SIR"
 file_path = "../CN_COVID_data/domestic_data.csv"
-region = "Shanghai"
+region = "上海"
 start_date = "2022-03-10"
 end_date = "2022-04-17"
 days = calc_days(start_date, end_date) - 2
@@ -48,7 +48,7 @@ gamma_I = 7e-4
 gamma_A = 1e-4
 gamma_Aq = 0.03
 gamma_Iq = 0.05
-N_e = {"Shanghai": 2.489e7, "Hubei": 5.830e7}
+N_e = {"上海": 2.489e7, "湖北": 5.830e7}
 
 
 """ ===========变量设置==========="""
@@ -98,7 +98,7 @@ FieldD = ea.crtfld(Encoding, varTypes, ranges, borders, precisions, codes, scale
 
 """ ===========遗传算法参数设置==========="""
 NIND = 100  # 种群个体数目
-MAXGEN = 500  # 最大遗传代数
+MAXGEN = 5  # 最大遗传代数
 maxormins = np.array([1])  # 1：目标函数最小化，-1：目标函数最大化
 select_style = 'rws'  # 轮盘赌选择
 rec_style = 'xovdp'  # 两点交叉

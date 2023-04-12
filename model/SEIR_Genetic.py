@@ -37,7 +37,7 @@ gamma_Iq(t) = z_1 + z_2 * tanh((t - a)/b)
 
 model_name = "SEAIR"
 file_path = "../CN_COVID_data/domestic_data.csv"
-region = "Shanghai"
+region = "上海"
 start_date = "2022-03-10"
 end_date = "2022-04-17"
 days = calc_days(start_date, end_date) - 2
@@ -58,7 +58,7 @@ gamma_I = 7e-4
 gamma_A = 1e-4
 gamma_Aq = 0.03
 chi = 0
-N_e = {"Shanghai": 2.489e7, "Hubei": 5.830e7}
+N_e = {"上海": 2.489e7, "湖北": 5.830e7}
 z_1 = 0.045
 z_2 = 0.026
 a = 28
