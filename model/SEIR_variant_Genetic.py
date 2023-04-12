@@ -36,7 +36,7 @@ gamma_Iq(t) = z_1 + z_2 * tanh((t - a)/b)
 
 model_name = "SEIR_V"
 file_path = "../CN_COVID_data/domestic_data.csv"
-region = "上海"
+region = "Shanghai"
 start_date = "2022-03-10"
 end_date = "2022-04-17"
 days = calc_days(start_date, end_date) - 2
@@ -57,7 +57,7 @@ gamma_A = 1e-4
 gamma_Aq = 0.03
 gamma_Iq = 0.05
 chi = 1
-N_e = {"上海": 2.489e7, "湖北": 5.830e7}
+N_e = {"Shanghai": 2.489e7, "Hubei": 5.830e7}
 
 
 """ ===========变量设置==========="""
@@ -247,7 +247,7 @@ def start_GA():
     log_file_name += str(int(obj_trace[best_gen, 1])) + '-'
     log_file_name += str(day) + '_' + str(hour) + '_' + str(minute)
 
-    ea.trcplot(obj_trace, [['种群个体平均目标函数值', '种群最优个体目标函数值']],
+    ea.trcplot(obj_trace, [['Average value of population', 'Population optimal individual value']],
                save_path="../img/track"+log_file_name+' ')  # 绘制图像
 
     with open("../log/" + log_file_name + ".txt", mode='w', encoding="utf-8") as log_file:
