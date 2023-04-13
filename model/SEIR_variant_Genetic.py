@@ -39,6 +39,7 @@ file_path = "../CN_COVID_data/domestic_data.csv"
 region = "上海"
 start_date = "2022-03-10"
 end_date = "2022-04-17"
+plot_end_date = "2022-06-17"
 days = calc_days(start_date, end_date) - 2
 
 y0 = [0, 0, 1, 0, 0, 0, 0, 0]
@@ -203,6 +204,17 @@ def write_param(log_file: _io.TextIOWrapper):
     log_file.writelines(temp_str)
 
 
+def draw_result(file_path, log_file_name, region, start_date, end_date, variable):
+    y_data = read_file(file_path, region, start_date, end_date)
+    days = calc_days(start_date, end_date) - 2
+    y0 = [0, 0, 1, 0, 0, 0, 0, 0]
+    t = np.linspace(0, days, days + 1)
+    sol = odeint(model, y0, t, args=(variable[0, 0], variable[0, 1], variable[0, 2], variable[0, 3], variable[0, 4],
+                                     variable[0, 5], variable[0, 6], variable[0, 7], variable[0, 8], variable[0, 9],
+                                     variable[0, 10], variable[0, 11], chi, N_e[region]))
+    plot_graph(log_file_name, sol, model_name, region, t, y_data, [3, 5, 6])
+
+
 def start_GA(iter_round):
     """=========================开始遗传算法进化========================"""
     start_time = time.time()  # 开始计时
@@ -272,9 +284,10 @@ def start_GA(iter_round):
                                      variable[0, 5], variable[0, 6], variable[0, 7], variable[0, 8], variable[0, 9],
                                      variable[0, 10], variable[0, 11], chi, N_e[region]))
 
-    plot_graph(log_file_name, sol, model_name, region, t, y_data, [3, 5, 6])
     np.savetxt("../log/" + log_file_name + ".csv", sol, delimiter=',', header="E, Eq, I, Iq, A, Aq, R1, R2",
                comments="")
+
+    draw_result(file_path, log_file_name, region, start_date, plot_end_date, variable)
 
 
 for i in range(10):

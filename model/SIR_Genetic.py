@@ -33,6 +33,7 @@ file_path = "../CN_COVID_data/domestic_data.csv"
 region = "上海"
 start_date = "2022-03-10"
 end_date = "2022-04-17"
+plot_end_date = "2022-06-17"
 days = calc_days(start_date, end_date) - 2
 
 y0 = [1, 0, 0, 0, 0, 0]
@@ -98,7 +99,7 @@ FieldD = ea.crtfld(Encoding, varTypes, ranges, borders, precisions, codes, scale
 
 """ ===========遗传算法参数设置==========="""
 NIND = 100  # 种群个体数目
-MAXGEN = 5  # 最大遗传代数
+MAXGEN = 1000  # 最大遗传代数
 maxormins = np.array([1])  # 1：目标函数最小化，-1：目标函数最大化
 select_style = 'rws'  # 轮盘赌选择
 rec_style = 'xovdp'  # 两点交叉
@@ -124,7 +125,6 @@ def model(y, t, rho, phi, beta, eta, theta, mu, gamma_I, gamma_A, gamma_Aq, gamm
     dR_2 = gamma_A * A + gamma_I * I
 
     return dI, dI_q, dA, dA_q, dR_1, dR_2
-
 
 
 # 种群染色体矩阵(Chrom)
@@ -180,6 +180,17 @@ def write_param(log_file: _io.TextIOWrapper):
     temp_str += "gamma_Iq: " + str(gamma_Iq) + "\n"
     temp_str += "N_e: " + str(N_e) + "\n"
     log_file.writelines(temp_str)
+
+
+def draw_result(file_path, log_file_name, region, start_date, end_date, variable):
+    y_data = read_file(file_path, region, start_date, end_date)
+    days = calc_days(start_date, end_date) - 2
+    y0 = [1, 0, 0, 0, 0, 0]
+    t = np.linspace(0, days, days + 1)
+    sol = odeint(model, y0, t, args=(variable[0, 0], variable[0, 1], variable[0, 2], variable[0, 3], variable[0, 4],
+                                     variable[0, 5], variable[0, 6], variable[0, 7], variable[0, 8], variable[0, 9],
+                                     N_e[region]))
+    plot_graph(log_file_name, sol, model_name, region, t, y_data, [1, 3, 4])
 
 
 def start_GA(iter_round):
@@ -251,9 +262,10 @@ def start_GA(iter_round):
                                      variable[0, 5], variable[0, 6], variable[0, 7], variable[0, 8], variable[0, 9],
                                      N_e[region]))
 
-    plot_graph(log_file_name, sol, model_name, region, t, y_data, [1, 3, 4])
     np.savetxt("../log/" + log_file_name + ".csv", sol, delimiter=',', header="I, Iq, A, Aq, R1, R2",
                comments="")
+
+    draw_result(file_path, log_file_name, region, start_date, plot_end_date, variable)
 
 
 for i in range(10):

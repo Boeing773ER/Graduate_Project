@@ -2,6 +2,7 @@ import datetime as dt
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
+from scipy.integrate import odeint
 
 
 def calc_days(start, end):
@@ -55,3 +56,4 @@ def plot_graph(file_name, sol, model_name, region, t, y_data, num):
     plt.grid()
     plt.savefig("../img/pic-"+file_name+".png")
     plt.show()
+
