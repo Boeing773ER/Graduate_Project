@@ -84,9 +84,6 @@ varTypes = np.array(np.zeros(params_count))  # 决策变量的类型，0表示�
 # borders = np.vstack([b1, b2, b3, b4, b5, b6]).T  # 生成自变量的边界矩阵
 # varTypes = np.array([0, 0, 0, 0, 0, 0])  # 决策变量的类型，0表示连续，1表示离散
 
-# TODO: 运行时报错
-# log_file_name += str(int(obj)trace[best_gen, 1])) + '-'
-
 """ ===========染色体编码设置==========="""
 Encoding = 'BG'  # 表示采用“实整数编码”，即变量可以是连续的也可以是离散的
 codes = np.zeros(params_count)  # 决策变量的编码方式，0表示决策变量使用二进制编码
@@ -108,7 +105,7 @@ select_style = 'rws'  # 轮盘赌选择
 rec_style = 'xovdp'  # 两点交叉
 mut_style = 'mutbin'  # 二进制染色体的变异算子
 Lind = int(np.sum(FieldD[0, :]))  # 染色体长度
-pc = 0.5  # 交叉概率
+pc = 0.8  # 交叉概率
 pm = 1 / Lind  # 变异概率
 obj_trace = np.zeros((MAXGEN, 2))
 var_trace = np.zeros((MAXGEN, int(Lind)))

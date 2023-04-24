@@ -118,7 +118,7 @@ select_style = 'rws'  # 轮盘赌选择
 rec_style = 'xovdp'  # 两点交叉
 mut_style = 'mutbin'  # 二进制染色体的变异算子
 Lind = int(np.sum(FieldD[0, :]))  # 染色体长度
-pc = 0.7  # 交叉概率
+pc = 0.5  # 交叉概率
 pm = 1 / Lind  # 变异概率
 obj_trace = np.zeros((MAXGEN, 2))
 var_trace = np.zeros((MAXGEN, int(Lind)))
@@ -164,6 +164,9 @@ def aim(Phen, CV):
 
     # rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A, gamma_Aq, gamma_Iq, chi, N_e
 
+    # for phen in Phen:
+    #     # 计算目标函数值
+    #     sol = odeint(model, y0, t, args=(*phen, chi, N_e[region]))
     for rho_x, phi_x, beta_x, epsilon_x, alpha_x, eta_x, theta_x, mu_x, gamma_I_x, gamma_A_x, gamma_Aq_x, gamma_Iq_x in \
             zip(rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A, gamma_Aq, gamma_Iq):
         # 计算目标函数值

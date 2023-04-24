@@ -1,42 +1,42 @@
-# # ----- convert date format -----
-# import pandas as pd
-# import matplotlib.pyplot as plt
-#
-# file_path = "./CN_COVID_data/domestic_recent_provinces.csv"
-# data_file = pd.read_csv(file_path)
-# # 取出指定日期范围数据
-# sub_data = data_file.loc[data_file.province == "上海", :]
-# # sub_data = sub_data.loc[data_file.city == "浦东"]
-# # sub_data = sub_data.loc[data_file.date <= 5, :]
-# sub_data = sub_data.loc[data_file.year == 2020]
-# # sub_data = data_file
-#
-# # print(data_file["date"], type(data_file["date"]))
-#
-# # print(type(data_file.loc[0, "year"]), type(data_file.loc[0, "date"]))
-#
-# date = data_file.loc[:, "year":"date"]
-# date.insert(loc=0, column='year-date', value=0)
-# array = data_file["year"].to_string(index=False)
-# year_list = array.split('\n')
-#
-# array = data_file["date"].to_string(index=False)
-# date_list = array.split('\n')
-#
-# year_date_list = []
-# z = zip(year_list, date_list)
-# for year, date in z:
-#     month = date.split('.')[0]
-#     day = date.split('.')[1]
-#     str_date = '{:0>2d}'.format(int(month)) + '-' + '{:0>2d}'.format(int(day))
-#     temp_str = year + "-" + str(str_date)
-#     year_date_list.append(temp_str)
-# print(data_file.columns)
-# data_file.drop(columns=['year', 'date'], axis=1, inplace=True)
-# data_file.insert(loc=0, column="date", value=year_date_list)
-# data_file.rename(columns={'deadAdd': 'dead_add', 'now_wzz': 'now_asy', 'wzz_add': 'asy_add'}, inplace=True)
-# print(data_file.columns)
-# data_file.to_csv("./CN_COVID_data/domestic_data.csv")
+# ----- convert date format -----
+import pandas as pd
+import matplotlib.pyplot as plt
+
+file_path = "./CN_COVID_data/domestic_recent_provinces.csv"
+data_file = pd.read_csv(file_path)
+# 取出指定日期范围数据
+sub_data = data_file.loc[data_file.province == "上海", :]
+# sub_data = sub_data.loc[data_file.city == "浦东"]
+# sub_data = sub_data.loc[data_file.date <= 5, :]
+sub_data = sub_data.loc[data_file.year == 2020]
+# sub_data = data_file
+
+# print(data_file["date"], type(data_file["date"]))
+
+# print(type(data_file.loc[0, "year"]), type(data_file.loc[0, "date"]))
+
+date = data_file.loc[:, "year":"date"]
+date.insert(loc=0, column='year-date', value=0)
+array = data_file["year"].to_string(index=False)
+year_list = array.split('\n')
+
+array = data_file["date"].to_string(index=False)
+date_list = array.split('\n')
+
+year_date_list = []
+z = zip(year_list, date_list)
+for year, date in z:
+    month = date.split('.')[0]
+    day = date.split('.')[1]
+    str_date = '{:0>2d}'.format(int(month)) + '-' + '{:0>2d}'.format(int(day))
+    temp_str = year + "-" + str(str_date)
+    year_date_list.append(temp_str)
+print(data_file.columns)
+data_file.drop(columns=['year', 'date'], axis=1, inplace=True)
+data_file.insert(loc=0, column="date", value=year_date_list)
+data_file.rename(columns={'deadAdd': 'dead_add', 'now_wzz': 'now_asy', 'wzz_add': 'asy_add'}, inplace=True)
+print(data_file.columns)
+data_file.to_csv("./CN_COVID_data/domestic_data.csv")
 
 
 # rho = 1.08e-01
