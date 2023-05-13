@@ -112,7 +112,7 @@ FieldD = ea.crtfld(Encoding, varTypes, ranges, borders, precisions, codes, scale
 
 """ ===========遗传算法参数设置==========="""
 NIND = 100  # 种群个体数目
-MAXGEN = 1000  # 最大遗传代数
+MAXGEN = 600  # 最大遗传代数
 maxormins = np.array([1])  # 1：目标函数最小化，-1：目标函数最大化
 select_style = 'rws'  # 轮盘赌选择
 rec_style = 'xovdp'  # 两点交叉
@@ -142,37 +142,37 @@ def model(y, t, rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A
     return dE, dE_q, dI, dI_q, dA, dA_q, dR_1, dR_2
 
 
-
 # 种群染色体矩阵(Chrom)
 # 种群表现型矩阵(Phen)
 # 种群个体违反约束程度矩阵(CV)
 # 种群适应度(FitnV)
 def aim(Phen, CV):
-    rho = Phen[:, [0]]
-    phi = Phen[:, [1]]
-    beta = Phen[:, [2]]
-    epsilon = Phen[:, [3]]
-    alpha = Phen[:, [4]]
-    eta = Phen[:, [5]]
-    theta = Phen[:, [6]]
-    mu = Phen[:, [7]]
-    gamma_I = Phen[:, [8]]
-    gamma_A = Phen[:, [9]]
-    gamma_Aq = Phen[:, [10]]
-    gamma_Iq = Phen[:, [11]]
-    f = []
+    # rho = Phen[:, [0]]
+    # phi = Phen[:, [1]]
+    # beta = Phen[:, [2]]
+    # epsilon = Phen[:, [3]]
+    # alpha = Phen[:, [4]]
+    # eta = Phen[:, [5]]
+    # theta = Phen[:, [6]]
+    # mu = Phen[:, [7]]
+    # gamma_I = Phen[:, [8]]
+    # gamma_A = Phen[:, [9]]
+    # gamma_Aq = Phen[:, [10]]
+    # gamma_Iq = Phen[:, [11]]
+
 
     # rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A, gamma_Aq, gamma_Iq, chi, N_e
 
-    # for phen in Phen:
-    #     # 计算目标函数值
-    #     sol = odeint(model, y0, t, args=(*phen, chi, N_e[region]))
-    for rho_x, phi_x, beta_x, epsilon_x, alpha_x, eta_x, theta_x, mu_x, gamma_I_x, gamma_A_x, gamma_Aq_x, gamma_Iq_x in \
-            zip(rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A, gamma_Aq, gamma_Iq):
-        # 计算目标函数值
-        sol = odeint(model, y0, t, args=(rho_x[0], phi_x[0], beta_x[0], epsilon_x[0], alpha_x[0], eta_x[0], theta_x[0],
-                                         mu_x[0], gamma_I_x[0], gamma_A_x[0], gamma_Aq_x[0], gamma_Iq_x[0], chi, N_e[region]))
 
+    # for rho_x, phi_x, beta_x, epsilon_x, alpha_x, eta_x, theta_x, mu_x, gamma_I_x, gamma_A_x, gamma_Aq_x, gamma_Iq_x in \
+    #         zip(rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A, gamma_Aq, gamma_Iq):
+    #     # 计算目标函数值
+    #     sol = odeint(model, y0, t, args=(rho_x[0], phi_x[0], beta_x[0], epsilon_x[0], alpha_x[0], eta_x[0], theta_x[0],
+    #                                      mu_x[0], gamma_I_x[0], gamma_A_x[0], gamma_Aq_x[0], gamma_Iq_x[0], chi, N_e[region]))
+    f = []
+    for phen in Phen:
+        # 计算目标函数值
+        sol = odeint(model, y0, t, args=(*phen, chi, N_e[region]))
         I_q = sol[:, 3]
         A_q = sol[:, 5]
         R_q = sol[:, 6]
@@ -293,6 +293,7 @@ def start_GA(iter_round):
     draw_result(file_path, log_file_name, region, start_date, plot_end_date, variable)
 
 
-for i in range(10):
+for i in range(1, 9):
+    pc = 0.1*i
     start_GA(i)
 

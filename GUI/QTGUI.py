@@ -1,3 +1,6 @@
+from copy import deepcopy, copy
+from tokenize import String
+
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QMainWindow, QAction, QStatusBar, QPlainTextEdit
@@ -10,158 +13,273 @@ class PredictionGui(QMainWindow):
         self.openfile = list()  # single file
         self.path_list = list()     # multiple file
 
+        self.input_table_data = []  # data from input table
+
+        self.day_length = 30
+
         self.highlight = False  # high light or not
-        window_icon = QIcon("./icon/text_editor.png")
+        window_icon = QIcon("./icon/program.png")
         window_icon.addPixmap(QtGui.QPixmap("my.ico"), QIcon.Normal, QIcon.Off)
 
         # MainWindow
         super(PredictionGui, self).__init__(parent)
         self.setObjectName("MainWindow")
-        self.setWindowTitle("Text Editor")
+        self.setWindowTitle("COVID Prediction")
         self.setWindowIcon(window_icon)
         self.resize(800, 600)
         self.setMouseTracking(False)
         self.setContextMenuPolicy(QtCore.Qt.DefaultContextMenu)
         self.setToolTip("")
 
-        # plainTextEdit
-        self.plainTextEdit = QPlainTextEdit()
-        self.editor_font = self.plainTextEdit.font()
-        self.editor_font.setPointSize(20)
-        self.plainTextEdit.setFont(self.editor_font)
-        self.setCentralWidget(self.plainTextEdit)   # set it as central widget
-        self.plainTextEdit.close()      # close, make it invisible
-        self.plainTextEdit.textChanged.connect(lambda: self.text_changed())
-        self.plainTextEdit.cursorPositionChanged.connect(lambda: self.cursor_pos_changed())
-        #Cursor
-        # self.text_cursor = self.plainTextEdit.textCursor()
+        # Init Page
+        self.init_page = QFrame()
 
-        # menubar
-        self.menubar = self.menuBar()
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 800, 26))
-        self.menubar.setObjectName("menubar")
-        # menu
-        menu_file = self.menubar.addMenu("File(&F)")
-        menu_edit = self.menubar.addMenu("Edit(&E)")
-        menu_coding = self.menubar.addMenu("Coding(&C)")
-        menu_advanced = self.menubar.addMenu("Advanced(&A)")
-        # QAction within menuBar
-        m_save = QAction(QIcon("./icon/save.png"), "Save", self)
-        m_save.setObjectName("M_Save")
-        m_save.setShortcut("Ctrl+S")
-        m_open = QAction(QIcon("./icon/open.png"), "Open", self)
-        m_open.setObjectName("M_Open")
-        m_open.setShortcut("Ctrl+O")
-        m_new = QAction(QIcon("./icon/new file.png"), "New File", self)
-        m_new.setObjectName("M_New")
-        m_new.setShortcut("Ctrl+N")
-        m_find = QAction(QIcon("./icon/find.png"), "Find", self)
-        m_find.setObjectName("M_Find")
-        m_find.setShortcut("Ctrl+F")
-        m_replace = QAction(QIcon("./icon/replace.png"), "Replace", self)
-        m_replace.setObjectName("M_Replace")
-        m_replace.setShortcut("Ctrl+R")
-        m_remove_highlight = QAction(QIcon("./icon/remove_tag.png"), "Remove Highlight", self)
-        m_remove_highlight.setObjectName("M_Remove_Highlight")
-        m_encode = QAction(QIcon("./icon/encode.png"), "Encode", self)
-        m_encode.setObjectName("M_Encode")
-        m_decode = QAction(QIcon("./icon/decode.png"), "Decode", self)
-        m_decode.setObjectName("M_Decode")
-        m_mul_search = QAction(QIcon("./icon/adv_search.png"), "Multi File Search", self)
-        m_mul_search.setObjectName("M_Mul_Search")
-        m_statistic = QAction(QIcon("./icon/statistic.png"), "Statistic", self)
-        m_statistic.setObjectName("M_Statistic")
-        # add action to menuBar
-        menu_file.addAction(m_new)
-        menu_file.addAction(m_open)
-        menu_file.addSeparator()
-        menu_file.addAction(m_save)
-        menu_edit.addAction(m_find)
-        menu_edit.addAction(m_replace)
-        menu_edit.addSeparator()
-        menu_edit.addAction(m_remove_highlight)
-        menu_coding.addAction(m_encode)
-        menu_coding.addAction(m_decode)
-        menu_advanced.addAction(m_mul_search)
-        menu_advanced.addAction(m_statistic)
+        self.normal_prompt = QFont()
+        self.normal_prompt.setBold(True)
+        self.normal_prompt.setPointSize(15)
 
-        # toolBar
-        self.toolBar = self.addToolBar("File")
-        self.toolBar.setObjectName("toolBar")
-        self.font_size = QComboBox()
-        combo_font = self.font_size.font()
-        combo_font.setPointSize(13)
-        font_label = QLabel()
-        font_label.setText("Font Size:")
-        temp_font = font_label.font()
-        temp_font.setBold(True)
-        font_label.setFont(temp_font)
-        self.font_size.setFont(combo_font)
-        font_size_list = [10, 11, 12, 13, 15, 17, 20, 23, 26, 30]
-        for i in range(10):
-            self.font_size.addItem(str(font_size_list[i]))
-            temp_font = combo_font
-            temp_font.setPointSize(font_size_list[i])
-            self.font_size.setItemData(i, temp_font, Qt.FontRole)
-        self.font_size.setCurrentIndex(6)   # default value (3+1)*5 = 20
-        self.font_size.setEditable(True)
-        self.font_size.setMinimumWidth(100)
-        self.font_size.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-        self.font_size.currentTextChanged[str].connect(lambda: self.change_font_size())    # send content
-        # add QAction to toolBar
-        self.toolBar.addAction(m_new)
-        self.toolBar.addAction(m_open)
-        self.toolBar.addAction(m_save)
-        self.toolBar.addSeparator()
-        self.toolBar.addAction(m_find)
-        self.toolBar.addAction(m_replace)
-        self.toolBar.addAction(m_remove_highlight)
-        self.toolBar.addSeparator()
-        self.toolBar.addAction(m_encode)
-        self.toolBar.addAction(m_decode)
-        self.toolBar.addSeparator()
-        self.toolBar.addAction(m_mul_search)
-        self.toolBar.addAction(m_statistic)
-        self.toolBar.addSeparator()
-        self.toolBar.addWidget(font_label)
-        self.toolBar.addWidget(self.font_size)
+        self.secondary_prompt = QFont()
+        self.secondary_prompt.setPointSize(10)
+        self.secondary_prompt.setItalic(True)
 
-        # statusbar
-        self.statusbar = QStatusBar()
-        self.statusbar.setObjectName("statusbar")
-        self.setStatusBar(self.statusbar)
-        # init component
-        self.courser_pos = QLabel()
-        self.courser_pos.setMinimumWidth(200)
-        self.courser_pos.setAlignment(Qt.AlignCenter)
-        self.courser_pos.setText("Bl:1 \t Col:1")
-        self.sb_message = QLabel()
-        self.sb_message.setMinimumWidth(200)
-        self.sb_message.setAlignment(Qt.AlignCenter)
-        self.word_count = QLabel()
-        self.word_count.setMinimumWidth(100)
-        self.word_count.setAlignment(Qt.AlignCenter)
-        self.word_count.setText("0 Char")
-        self.file_name = QLabel()
-        self.file_name.setMinimumWidth(150)
-        self.file_name.setAlignment(Qt.AlignCenter)
-        self.file_name.setText("File:")
-        self.statusbar.addPermanentWidget(self.sb_message)
-        self.statusbar.addPermanentWidget(self.courser_pos)
-        self.statusbar.addPermanentWidget(self.word_count)
-        self.statusbar.addPermanentWidget(self.file_name)
+        # Layout
+        # self.init_page_layout = QHBoxLayout()
+        # self.file_upload_layout = self.init_page_layout.QVBoxLayout()
+        # self.select_model_layout = self.init_page_layout.QVBoxLayout()
 
-        # connect
-        m_new.triggered.connect(self.new_pressed)
-        m_open.triggered.connect(self.open_pressed)
-        m_save.triggered.connect(self.save_pressed)
-        m_find.triggered.connect(self.find_pressed)
-        m_replace.triggered.connect(self.replace_pressed)
-        m_remove_highlight.triggered.connect(self.rem_hl_pressed)
-        m_encode.triggered.connect(self.encode_pressed)
-        m_decode.triggered.connect(self.decode_pressed)
-        m_mul_search.triggered.connect(self.mul_search_pressed)
-        m_statistic.triggered.connect(self.statistic_pressed)
+        # Select file sector
+        # Label
+        self.select_file_prompt = QLabel("Input statistic")
+        self.select_file_prompt.setFont(self.normal_prompt)
 
-        # testing
-        # self.inverted_index()
+        # self.select_file_explain = QLabel("File should a.csv file that contains 3 columns")
+        self.select_file_explain = QLabel("Select a .csv file or input the data manually")
+        self.select_file_explain.setFont(self.secondary_prompt)
+        self.select_file_explain.setStyleSheet("color:grey")
+        self.select_file_explain.setWordWrap(True)
+
+        self.upload_file_prompt = QLabel("Data not loaded")
+
+        # check box
+        font = QFont()
+        font.setPointSize(10)
+        self.infected_checkbox = QCheckBox("Infected")
+        self.infected_checkbox.setChecked(True)
+        self.infected_checkbox.setFont(font)
+        self.asymptom_checkbox = QCheckBox("Asymptom")
+        self.asymptom_checkbox.setChecked(True)
+        self.asymptom_checkbox.setFont(font)
+        self.healed_checkbox = QCheckBox("Healed")
+        self.healed_checkbox.setChecked(True)
+        self.healed_checkbox.setFont(font)
+
+        self.checkbox_layout = QVBoxLayout()
+        self.checkbox_layout.addWidget(self.infected_checkbox)
+        self.checkbox_layout.addWidget(self.asymptom_checkbox)
+        self.checkbox_layout.addWidget(self.healed_checkbox)
+
+        # spin box
+        self.days_input = QSpinBox()
+        self.days_input.setRange(1, 100)
+        self.days_input.setSingleStep(1)
+        self.days_input.setFont(font)
+        self.days_input.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.days_input.setValue(self.day_length)
+        self.days_input.valueChanged.connect(lambda: self.spinbox_value_change())
+
+        # button
+        button_font = QFont()
+        button_font.setPointSize(12)
+        button_font.setBold(True)
+        self.select_file_button = QPushButton("Select File")
+        self.select_file_button.setFont(button_font)
+        self.select_file_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.select_file_button.clicked.connect(lambda: self.upload_file_pressed())
+
+        self.manual_input_button = QPushButton("Manual Input")
+        self.manual_input_button.setFont(button_font)
+        self.manual_input_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.manual_input_button.clicked.connect(lambda: self.manual_input_pressed())
+
+        self.upload_button_layout = QHBoxLayout()
+        self.upload_button_layout.addWidget(self.select_file_button)
+        self.upload_button_layout.addWidget(self.manual_input_button)
+
+        # self.manual_input_prompt = QLabel("Manual statistic input")
+        # self.manual_input_prompt.setFont(self.normal_prompt)
+
+        # self.manual_input_explain = QLabel("You can also input the data manually")
+        # self.manual_input_explain.setFont(self.secondary_prompt)
+        # self.manual_input_explain.setStyleSheet("color:grey")
+        # self.manual_input_prompt.setWordWrap(True)
+
+        # layout
+        self.file_upload_layout = QVBoxLayout()
+        self.file_upload_layout.addWidget(self.select_file_prompt)
+        self.file_upload_layout.addWidget(self.select_file_explain)
+        self.file_upload_layout.addLayout(self.checkbox_layout)
+        self.file_upload_layout.addWidget(self.days_input)
+        self.file_upload_layout.addLayout(self.upload_button_layout)
+        self.file_upload_layout.addWidget(self.upload_file_prompt)
+        # self.file_upload_layout.addWidget(self.select_file_button)
+        # self.file_upload_layout.addWidget(self.manual_input_prompt)
+        # self.file_upload_layout.addWidget(self.manual_input_explain)
+        # self.file_upload_layout.addWidget(self.manual_input_button)
+
+        self.file_upload_layout.setContentsMargins(30, 80, 30, 150)
+        # self.file_upload_layout.setSpacing(100)
+
+        # Select model sector
+        self.select_model_prompt = QLabel("Select model")
+        self.select_model_prompt.setFont(self.normal_prompt)
+
+        self.select_model_explain = QLabel("Select model explain here         ")
+        self.select_model_explain.setFont(self.secondary_prompt)
+        self.select_model_explain.setStyleSheet("color:grey")
+
+        self.model_selector = QComboBox()
+        self.model_selector.addItem("SIR")
+        self.model_selector.addItem("SEIR")
+        self.model_selector.addItem("SEIR-2")
+        self.model_selector.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+        self.model_sector_spacer = QSpacerItem(30, 70, QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+        self.start_button = QPushButton("Start")
+        self.start_button.setFont(self.normal_prompt)
+        self.start_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.start_button.clicked.connect(lambda: self.start_pressed())
+        # self.start_button.setStyleSheet("background:grey")
+
+        # layout
+        self.select_model_layout = QVBoxLayout()
+        self.select_model_layout.addWidget(self.select_model_prompt)
+        self.select_model_layout.addWidget(self.select_model_explain)
+        self.select_model_layout.addWidget(self.model_selector)
+        self.select_model_layout.addItem(self.model_sector_spacer)
+        self.select_model_layout.addWidget(self.start_button)
+
+        self.select_model_layout.setContentsMargins(30, 80, 30, 150)
+
+        # =======================
+        self.init_page_layout = QHBoxLayout()
+        self.init_page_layout.addLayout(self.file_upload_layout, stretch=1)
+        self.init_page_layout.addLayout(self.select_model_layout, stretch=1)
+        # self.init_page_layout.setStretchFactor(self.file_upload_layout, 1)
+        # self.init_page_layout.setStretchFactor(self.select_model_layout, 1)
+        self.init_page.setLayout(self.init_page_layout)
+
+        # Frame 2
+        self.result_frame = QFrame()
+
+        # button
+        self.return_button = QPushButton("Back")
+        self.return_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.return_button.clicked.connect(lambda: self.return2init())
+
+        # ===============
+        self.result_frame_layout = QHBoxLayout()
+        self.result_frame_layout.addWidget(self.return_button)
+        self.result_frame.setLayout(self.result_frame_layout)
+
+
+        self.main_window_layout = QStackedLayout()
+        self.central_widget = QFrame()
+        self.setCentralWidget(self.central_widget)
+        self.central_widget.setLayout(self.main_window_layout)
+        self.main_window_layout.addWidget(self.result_frame)
+        self.main_window_layout.addWidget(self.init_page)
+        self.main_window_layout.setCurrentIndex(1)
+
+
+    def upload_file_pressed(self):
+        print("in func upload_file_pressed")
+        openfile_name = QFileDialog.getOpenFileName(self, caption='Upload File', filter="CSV Files(*.csv)")
+        print(openfile_name)
+        if openfile_name == ('', ''):
+            print("open fail")
+        else:
+            self.openfile = openfile_name[0]
+            self.upload_file_prompt.setText("File uploaded:"+self.openfile)
+
+    def manual_input_pressed(self):
+        print("in func manual input pressed")
+        dialog = QDialog()
+        dialog.setWindowTitle("Manual input")
+
+        # table
+        data_table = QTableWidget(3, self.day_length, dialog)
+        header = ["Infected", "Asymptom", "Healed"]
+        data_table.setVerticalHeaderLabels(header)
+        # data_table.setHorizontalHeader().setSectionResizeMode(QHeaderView.Fixed)
+
+        dialog_button = QDialogButtonBox()
+        ok_button = QPushButton("OK")
+        no_button = QPushButton("NO")
+        dialog_button.addButton(ok_button, QDialogButtonBox.AcceptRole)
+        dialog_button.addButton(no_button, QDialogButtonBox.RejectRole)
+        dialog_button.accepted.connect(lambda: self.manual_input_accept(dialog, data_table))
+        dialog_button.rejected.connect(lambda: self.manual_input_reject(dialog))
+
+        # layout
+        layout = QVBoxLayout()
+        layout.addWidget(data_table)
+        layout.addWidget(dialog_button)
+        dialog.setLayout(layout)
+        dialog.resize(800, 225)
+        # dialog.exec()
+        dialog.show()
+
+    def start_pressed(self):
+        print("in func start pressed")
+        self.main_window_layout.setCurrentIndex(0)
+
+    def stop_pressed(self):
+        print("in func stop_pressed")
+
+    def return2init(self):
+        print("in func return2init")
+        self.main_window_layout.setCurrentIndex(1)
+
+    def save_result(self):
+        print("in func save_result")
+
+    def table_content_empty(self):
+        print("in func table content empty")
+        QMessageBox.warning(self, "Error", "Table Empty!", QMessageBox.Ok, QMessageBox.Ok)
+
+    def table_content_illegal(self):
+        print("in func table content illegal")
+        QMessageBox.warning(self, "Error", "Table Content Illegal!", QMessageBox.Ok, QMessageBox.Ok)
+
+    def manual_input_accept(self, dialog, table):
+        print("in func manual input accept")
+        row_count = table.model().rowCount()
+        col_count = table.model().columnCount()
+        for i in range(row_count):
+            temp_list = []
+            for j in range(col_count):
+                if table.item(i, j) is None:
+                    self.table_content_empty()
+                    return
+                else:
+                    text = table.item(i, j).text()
+                    try:
+                        num = int(text)
+                    except:
+                        self.table_content_illegal()
+                        return
+            self.input_table_data.append(temp_list)
+        print("out of for")
+        self.upload_file_prompt.setText("Data inputted manually")
+        dialog.destroy()
+
+    def manual_input_reject(self, dialog):
+        print("in func manual input reject")
+        dialog.destroy()
+
+    def spinbox_value_change(self):
+        print("in func spinbox value change")
+        temp = self.days_input.value()
+        print(type(temp), temp)
+        self.day_length = temp

@@ -90,8 +90,8 @@
 #                       drawLog=False,
 #                       saveFlag=False)
 #     print(res)
-
-
+import math
+from matplotlib import pyplot as plt
 import numpy as np
 import geatpy as ea
 from scipy.integrate import odeint
@@ -103,7 +103,9 @@ import multiprocessing as mp
 from multiprocessing import Pool as ProcessPool
 
 """==========问题类定义=========="""
-class MyProblem(ea.Problem):  # 继承Problem父类
+
+
+class SIRModel(ea.Problem):  # 继承Problem父类
     file_path = "./CN_COVID_data/domestic_data.csv"
     region = "上海"
     start_date = "2022-03-10"
@@ -126,7 +128,7 @@ class MyProblem(ea.Problem):  # 继承Problem父类
     N_e = {"上海": 2.489e7, "湖北": 5.830e7}
 
     def __init__(self, PoolType):
-        name = 'MyProblem'  # 初始化name（函数名称，可以随意设置）
+        name = 'SIR'  # 初始化name（函数名称，可以随意设置）
         M = 3  # 初始化M（目标维数）
         maxormins = [1] * M  # 初始化maxormins（目标最小最大化标记列表，1：最小化该目标；-1：最大化该目标）
         Dim = 10  # 初始化Dim（决策变量维数）
@@ -205,22 +207,208 @@ class MyProblem(ea.Problem):  # 继承Problem父类
     #     print(pop.ObjV)
 
 
+class SEIRModel(ea.Problem):  # 继承Problem父类
+    file_path = "./CN_COVID_data/domestic_data.csv"
+    region = "上海"
+    start_date = "2022-03-10"
+    end_date = "2022-04-17"
+    days = calc_days(start_date, end_date) - 2
+    y0 = [0, 0, 1, 0, 0, 0, 0, 0]
+    t = np.linspace(0, days, days + 1)
+    y_data = read_file(file_path, region, start_date, end_date)
+
+    rho = 0.85
+    phi = 3.696e-5
+    beta = 0.4
+    epsilon = 0.5
+    alpha = 0.2
+    eta = 0.75
+    theta = 0.75
+    mu = 0.2
+    gamma_I = 7e-4
+    gamma_A = 1e-4
+    gamma_Aq = 0.03
+    gamma_Iq = 0.05
+    chi = 1
+    N_e = {"上海": 2.489e7, "湖北": 5.830e7}
+
+    def __init__(self, PoolType):
+        name = 'SEIR'  # 初始化name（函数名称，可以随意设置）
+        M = 3  # 初始化M（目标维数）
+        maxormins = [1] * M  # 初始化maxormins（目标最小最大化标记列表，1：最小化该目标；-1：最大化该目标）
+        Dim = 12  # 初始化Dim（决策变量维数）
+        varTypes = [0] * Dim  # 初始化varTypes（决策变量的类型，元素为0表示对应的变量是连续的；1表示是离散的）
+        lb = [0] * Dim  # 决策变量下界
+        ub = [1] * Dim  # 决策变量上界
+        lbin = [1] * Dim  # 决策变量下边界
+        ubin = [1] * Dim  # 决策变量上边界
+        # 调用父类构造方法完成实例化
+        ea.Problem.__init__(self, name, M, maxormins, Dim, varTypes, lb, ub, lbin, ubin)
+
+        # 设置用多线程还是多进程
+        self.PoolType = PoolType
+        if self.PoolType == 'Thread':
+            self.pool = ThreadPool(2)  # 设置池的大小
+        elif self.PoolType == 'Process':
+            num_cores = int(mp.cpu_count())  # 获得计算机的核心数
+            self.pool = ProcessPool(num_cores)  # 设置池的大小
+
+    def model(self, y, t, rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A, gamma_Aq, gamma_Iq, chi,
+              N_e):
+        E, E_q, I, I_q, A, A_q, R_1, R_2 = y
+        dE = (1 - rho) * phi * (I + epsilon * E + beta * A) * (
+                N_e - E - E_q - I - I_q - A - A_q - R_1 - R_2) - alpha * E
+        dE_q = rho * phi * (I + epsilon * E + beta * A) * (N_e - E - E_q - I - I_q - A - A_q - R_1 - R_2) - alpha * E_q
+        dI = alpha * eta * E - theta * I - gamma_I * I
+        dI_q = alpha * eta * E_q + theta * I - gamma_Iq * I_q
+        dA = alpha * (1 - eta) * E - mu * A - gamma_A * A
+        dA_q = alpha * (1 - eta) * E_q + mu * A - gamma_Aq * A_q
+        dR_1 = gamma_Iq * I_q + chi * gamma_Aq * A_q
+        dR_2 = gamma_A * A + gamma_I * I + (1 - chi) * gamma_Aq * A_q
+
+        return dE, dE_q, dI, dI_q, dA, dA_q, dR_1, dR_2
+
+    def aimFunc(self, pop):  # 目标函数
+        loss1 = []
+        loss2 = []
+        loss3 = []
+        for phen in pop.Phen:
+            # 计算目标函数值
+            sol = odeint(self.model, self.y0, self.t, args=(*phen, self.chi, self.N_e[self.region]))
+            loss1.append(loss_eva(rmse_loss, sol[:, 3], self.y_data.now_confirm.to_numpy()))  # I_q
+            loss2.append(loss_eva(rmse_loss, sol[:, 5], self.y_data.now_asy.to_numpy()))  # A_q
+            loss3.append(loss_eva(rmse_loss, sol[:, 6], self.y_data.heal.to_numpy()))  # R_q
+        pop.ObjV = np.array([loss1, loss2, loss3]).T
+
+
+class SEAIRModel(ea.Problem):  # 继承Problem父类
+    file_path = "./CN_COVID_data/domestic_data.csv"
+    region = "上海"
+    start_date = "2022-03-10"
+    end_date = "2022-04-17"
+    days = calc_days(start_date, end_date) - 2
+    y0 = [0, 0, 1, 0, 0, 0, 0, 0]
+    t = np.linspace(0, days, days + 1)
+    y_data = read_file(file_path, region, start_date, end_date)
+
+    rho = 0.85
+    phi = 3.696e-5
+    beta = 0.4
+    epsilon = 0.5
+    alpha = 0.2
+    eta = 0.75
+    theta = 0.75
+    mu = 0.2
+    gamma_I = 7e-4
+    gamma_A = 1e-4
+    gamma_Aq = 0.03
+    gamma_Iq = 0.05
+    chi = 1
+    N_e = {"上海": 2.489e7, "湖北": 5.830e7}
+
+    def __init__(self, PoolType):
+        name = 'SEAIR'  # 初始化name（函数名称，可以随意设置）
+        M = 3  # 初始化M（目标维数）
+        maxormins = [1] * M  # 初始化maxormins（目标最小最大化标记列表，1：最小化该目标；-1：最大化该目标）
+        Dim = 15  # 初始化Dim（决策变量维数）
+        varTypes = [0] * Dim  # 初始化varTypes（决策变量的类型，元素为0表示对应的变量是连续的；1表示是离散的）
+        lb = [0] * Dim  # 决策变量下界
+        ub = [1] * Dim  # 决策变量上界
+        lbin = [1] * Dim  # 决策变量下边界
+        ubin = [1] * Dim  # 决策变量上边界
+        # 调用父类构造方法完成实例化
+        ea.Problem.__init__(self, name, M, maxormins, Dim, varTypes, lb, ub, lbin, ubin)
+
+        # 设置用多线程还是多进程
+        self.PoolType = PoolType
+        if self.PoolType == 'Thread':
+            self.pool = ThreadPool(2)  # 设置池的大小
+        elif self.PoolType == 'Process':
+            num_cores = int(mp.cpu_count())  # 获得计算机的核心数
+            self.pool = ProcessPool(num_cores)  # 设置池的大小
+
+    def model(self, y, t, rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A, gamma_Aq, z_1, z_2, a, b,
+              chi, N_e,):
+        E, E_q, I, I_q, A, A_q, R_1, R_2 = y
+
+        gamma_Iq = z_1 + z_2 * math.tanh((t - a) / b)
+
+        dE = (1 - rho) * phi * (I + epsilon * E + beta * A) * (
+                    N_e - E - E_q - I - I_q - A - A_q - R_1 - R_2) - alpha * E
+        dE_q = rho * phi * (I + epsilon * E + beta * A) * (N_e - E - E_q - I - I_q - A - A_q - R_1 - R_2) - alpha * E_q
+        dI = alpha * eta * E - theta * I - gamma_I * I
+        dI_q = alpha * eta * E_q + theta * I - gamma_Iq * I_q
+        dA = alpha * (1 - eta) * E - mu * A - gamma_A * A
+        dA_q = alpha * (1 - eta) * E_q + mu * A - gamma_Aq * A_q
+        dR_1 = gamma_Iq * I_q + chi * gamma_Aq * A_q
+        dR_2 = gamma_A * A + gamma_I * I + (1 - chi) * gamma_Aq * A_q
+
+        return dE, dE_q, dI, dI_q, dA, dA_q, dR_1, dR_2
+
+    def aimFunc(self, pop):  # 目标函数
+        loss1 = []
+        loss2 = []
+        loss3 = []
+        for phen in pop.Phen:
+            # 计算目标函数值
+            sol = odeint(self.model, self.y0, self.t, args=(*phen, self.chi, self.N_e[self.region]))
+            loss1.append(loss_eva(rmse_loss, sol[:, 3], self.y_data.now_confirm.to_numpy()))  # I_q
+            loss2.append(loss_eva(rmse_loss, sol[:, 5], self.y_data.now_asy.to_numpy()))  # A_q
+            loss3.append(loss_eva(rmse_loss, sol[:, 6], self.y_data.heal.to_numpy()))  # R_q
+        pop.ObjV = np.array([loss1, loss2, loss3]).T
+
+    def calReferObjV(self):  # 设定目标数参考值（本问题目标函数参考值设定为理论最优值）,这个函数其实可以不要
+        referenceObjV = np.array([[0, 0, 0]])
+        return referenceObjV
+
+
+def plot_graph(sol, model_name, region, t, y_data, num):
+    plt.title(model_name + " COVID " + region)
+    plt.plot(t, sol[:, num[0]], '--g', label='Pre_Inf_q')
+    plt.plot(t, y_data.now_confirm, 'g', label='Real_Inf_q')
+    # plt.plot(t, sol[:, num[1]], '--r', label='Pre_Asy_q')
+    # plt.plot(t, y_data.now_asy, 'r', label='Real_Asy_q')
+    # plt.plot(t, sol[:, num[2]], '--y', label='Pre_Removed_q')
+    # plt.plot(t, y_data.heal, 'y', label='Real_Removed_q')
+    plt.legend(loc='best')
+    plt.xlabel('t')
+    plt.grid()
+    # plt.savefig("../img/pic-"+file_name+".png")
+    plt.show()
+
+
+
 """==========执行脚本=========="""
 if __name__ == '__main__':
     PoolType = "Thread"
-    problem = MyProblem(PoolType)
+    problem = SIRModel(PoolType)
     # problem = MyProblem()  # 生成问题对象
     # 构建算法
-    print(ea.Population(Encoding='RI', NIND=100).ChromNum)
+    Encoding = "RI"
+    NIND = 100
+    # MAXGEN = 600
+    MAXGEN = 50
+    print(ea.Population(Encoding=Encoding, NIND=NIND).ChromNum)
     algorithm = ea.moea_NSGA2_templet(problem,
-                                      ea.Population(Encoding='RI', NIND=100),
-                                      MAXGEN=100,  # 最大进化代数。
+                                      ea.Population(Encoding=Encoding, NIND=NIND),
+                                      MAXGEN=MAXGEN,  # 最大进化代数。
                                       logTras=1)  # 表示每隔多少代记录一次日志信息，0表示不记录。
+    algorithm.recOper.XOVR = 0.4
     # 求解
     # algorithm.verbose = True
     # algorithm.drawing = 1
     # [BestIndi, population] = algorithm.run()  # 执行算法模板，得到最优个体以及最后一代种群
     # BestIndi.save()  # 把最优个体的信息保存到文件中
+    # print(type(BestIndi))
+    # print(BestIndi.Phen[0])
     res = ea.optimize(algorithm, verbose=True, drawing=1, outputMsg=True, drawLog=True, saveFlag=True,
-                      dirName='result')
+                      dirName=None)
+    print(res["Vars"][0, :])
+
+    temp_args = res["Vars"][0, :]
+    # sol = odeint(problem.model, problem.y0, problem.t, args=(*temp_args, problem.chi, problem.N_e[problem.region]))
+
+    # plot_graph(sol, problem.name, problem.region, problem.t, problem.y_data, [3, 5, 6])
+    sol = odeint(problem.model, problem.y0, problem.t, args=(*temp_args, problem.N_e[problem.region]))
+    plot_graph(sol, problem.name, problem.region, problem.t, problem.y_data, [1, 3, 4])
 
