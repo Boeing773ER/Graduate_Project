@@ -108,6 +108,7 @@ select_style = 'rws'  # 轮盘赌选择
 rec_style = 'xovdp'  # 两点交叉
 mut_style = 'mutbin'  # 二进制染色体的变异算子
 Lind = int(np.sum(FieldD[0, :]))  # 染色体长度
+print(FieldD)
 pc = 0.5  # 交叉概率
 pm = 1 / Lind  # 变异概率
 obj_trace = np.zeros((MAXGEN, 2))

@@ -1,16 +1,14 @@
-from copy import deepcopy, copy
-from tokenize import String
-
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QMainWindow, QAction, QStatusBar, QPlainTextEdit
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QIcon, QTextDocument, QTextCursor, QTextCharFormat, QFont
-
+# from GA import SEAIRmodel
+# from scipy.integrate import odeint
 
 class PredictionGui(QMainWindow):
     def __init__(self, parent=None):
-        self.openfile = list()  # single file
+        self.openfile = ""  # single file
         self.path_list = list()     # multiple file
 
         self.input_table_data = []  # data from input table
@@ -86,6 +84,10 @@ class PredictionGui(QMainWindow):
         self.days_input.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.days_input.setValue(self.day_length)
         self.days_input.valueChanged.connect(lambda: self.spinbox_value_change())
+
+        # text
+        self.region_population_input = QLineEdit()
+        self.region_population_input.setInputMask()
 
         # button
         button_font = QFont()
@@ -232,6 +234,14 @@ class PredictionGui(QMainWindow):
 
     def start_pressed(self):
         print("in func start pressed")
+        model_type = self.model_selector.currentText()
+        infected_checked = self.infected_checkbox.isChecked()
+        asymptom_checked = self.asymptom_checkbox.isChecked()
+        healed_checked = self.healed_checkbox.isChecked()
+        self.openfile
+        if model_type == "":
+            pass
+
         self.main_window_layout.setCurrentIndex(0)
 
     def stop_pressed(self):

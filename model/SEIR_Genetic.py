@@ -1,8 +1,8 @@
 import _io
 import math
-import numpy as np
-from scipy.integrate import odeint
-import matplotlib.pyplot as plt
+# import numpy as np
+# from scipy.integrate import odeint
+# import matplotlib.pyplot as plt
 import geatpy as ea
 import time
 from functions import *
@@ -153,6 +153,7 @@ b15 = [1, 1]
 
 ranges = np.vstack([x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15]).T  # 生成自变量的范围矩阵，使得第一行为所有决策变量的下界，第二行为上界
 borders = np.vstack([b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15]).T  # 生成自变量的边界矩阵
+print(ranges, borders)
 varTypes = np.array(np.zeros(params_count))  # 决策变量的类型，0表示连续，1表示离散
 # varTypes = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])  # 决策变量的类型，0表示连续，1表示离散
 # ranges = np.vstack([x1, x2, x3, x4, x5, x6]).T  # 生成自变量的范围矩阵，使得第一行为所有决策变量的下界，第二行为上界
@@ -181,15 +182,18 @@ select_style = 'rws'  # 轮盘赌选择
 rec_style = 'xovdp'  # 两点交叉
 mut_style = 'mutbin'  # 二进制染色体的变异算子
 Lind = int(np.sum(FieldD[0, :]))  # 染色体长度
+print(Lind)
+print(FieldD)
 pc = 0.5  # 交叉概率
 pm = 1 / Lind  # 变异概率
+print(pm)
 obj_trace = np.zeros((MAXGEN, 2))
 var_trace = np.zeros((MAXGEN, int(Lind)))
 
 y_data = read_file(file_path, region, start_date, end_date)
 
 
-def model(y, t, rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A, gamma_Aq, chi, N_e, z_1, z_2, a, b):
+def model(y, t, rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A, gamma_Aq, z_1, z_2, a, b, chi, N_e):
     E, E_q, I, I_q, A, A_q, R_1, R_2 = y
 
     gamma_Iq = z_1 + z_2 * math.tanh((t - a) / b)
@@ -211,34 +215,36 @@ def model(y, t, rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A
 # 种群个体违反约束程度矩阵(CV)
 # 种群适应度(FitnV)
 def aim(Phen, CV):
-    rho = Phen[:, [0]]
-    phi = Phen[:, [1]]
-    beta = Phen[:, [2]]
-    epsilon = Phen[:, [3]]
-    alpha = Phen[:, [4]]
-    eta = Phen[:, [5]]
-    theta = Phen[:, [6]]
-    mu = Phen[:, [7]]
-    gamma_I = Phen[:, [8]]
-    gamma_A = Phen[:, [9]]
-    gamma_Aq = Phen[:, [10]]
-    z_1 = Phen[:, [11]]
-    z_2 = Phen[:, [12]]
-    a = Phen[:, [13]]
-    b = Phen[:, [14]]
+    # rho = Phen[:, [0]]
+    # phi = Phen[:, [1]]
+    # beta = Phen[:, [2]]
+    # epsilon = Phen[:, [3]]
+    # alpha = Phen[:, [4]]
+    # eta = Phen[:, [5]]
+    # theta = Phen[:, [6]]
+    # mu = Phen[:, [7]]
+    # gamma_I = Phen[:, [8]]
+    # gamma_A = Phen[:, [9]]
+    # gamma_Aq = Phen[:, [10]]
+    # z_1 = Phen[:, [11]]
+    # z_2 = Phen[:, [12]]
+    # a = Phen[:, [13]]
+    # b = Phen[:, [14]]
     f = []
 
     # rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A, gamma_Aq, chi, N_e, z_1, z_2, a, b
 
     # TODO: 之前参数设置错误，SEAIR的实验数据有误
 
-    for rho_x, phi_x, beta_x, epsilon_x, alpha_x, eta_x, theta_x, mu_x, gamma_I_x, gamma_A_x, gamma_Aq_x, z_1_x, z_2_x, \
-        a_x, b_x in zip(rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A, gamma_Aq, z_1, z_2, a, b):
+    # for rho_x, phi_x, beta_x, epsilon_x, alpha_x, eta_x, theta_x, mu_x, gamma_I_x, gamma_A_x, gamma_Aq_x, z_1_x, z_2_x, \
+    #     a_x, b_x in zip(rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A, gamma_Aq, z_1, z_2, a, b):
+    #     # 计算目标函数值
+    #     sol = odeint(model, y0, t, args=(rho_x[0], phi_x[0], beta_x[0], epsilon_x[0], alpha_x[0], eta_x[0], theta_x[0],
+    #                                      mu_x[0], gamma_I_x[0], gamma_A_x[0], gamma_Aq[0], z_1_x[0],
+    #                                      z_2_x[0], a_x[0], b_x[0], chi, N_e[region]))
+    for phen in Phen:
         # 计算目标函数值
-        sol = odeint(model, y0, t, args=(rho_x[0], phi_x[0], beta_x[0], epsilon_x[0], alpha_x[0], eta_x[0], theta_x[0],
-                                         mu_x[0], gamma_I_x[0], gamma_A_x[0], gamma_Aq[0], chi, N_e[region], z_1_x[0],
-                                         z_2_x[0], a_x[0], b_x[0]))
-
+        sol = odeint(model, y0, t, args=(*phen, chi, N_e[region]))
         I_q = sol[:, 3]
         A_q = sol[:, 5]
         R_q = sol[:, 6]
