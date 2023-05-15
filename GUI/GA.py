@@ -324,10 +324,10 @@ class SEAIRmodel():
         self.draw_result(self.file_path, log_file_name, self.start_date, self.plot_end_date, variable)
 
 
-file_path = "../CN_COVID_data/domestic_data.csv"
-region_population = 2.489e7
-start_date = "2022-03-10"
-end_date = "2022-04-17"
-test_end_date = "2022-06-17"
-model = SEAIRmodel(file_path, region_population, start_date, end_date, test_end_date)
-model.start_GA(1)
+# file_path = "../CN_COVID_data/domestic_data.csv"
+# region_population = 2.489e7
+# start_date = "2022-03-10"
+# end_date = "2022-04-17"
+# test_end_date = "2022-06-17"
+# model = SEAIRmodel(file_path, region_population, start_date, end_date, test_end_date)
+# model.start_GA(1)

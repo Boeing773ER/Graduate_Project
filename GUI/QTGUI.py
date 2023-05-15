@@ -2,9 +2,10 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QMainWindow, QAction, QStatusBar, QPlainTextEdit
 from PyQt5.QtWidgets import *
-from PyQt5.QtGui import QIcon, QTextDocument, QTextCursor, QTextCharFormat, QFont
-# from GA import SEAIRmodel
+from PyQt5.QtGui import *
+from GA import SEAIRmodel
 # from scipy.integrate import odeint
+
 
 class PredictionGui(QMainWindow):
     def __init__(self, parent=None):
@@ -85,9 +86,17 @@ class PredictionGui(QMainWindow):
         self.days_input.setValue(self.day_length)
         self.days_input.valueChanged.connect(lambda: self.spinbox_value_change())
 
-        # text
+        # textinput
         self.region_population_input = QLineEdit()
-        self.region_population_input.setInputMask()
+        int_validator = QIntValidator(1, 999)
+        self.region_population_input.setValidator(int_validator)
+
+        self.param_input_layout = QFormLayout()
+        self.param_input_layout.addRow("Data:", self.checkbox_layout)
+        self.param_input_layout.addRow("Days:", self.days_input)
+        self.param_input_layout.addRow("Population:", self.region_population_input)
+        self.param_input_layout.setSpacing(10)
+        self.param_input_layout.setLabelAlignment(Qt.AlignLeft)
 
         # button
         button_font = QFont()
@@ -119,8 +128,9 @@ class PredictionGui(QMainWindow):
         self.file_upload_layout = QVBoxLayout()
         self.file_upload_layout.addWidget(self.select_file_prompt)
         self.file_upload_layout.addWidget(self.select_file_explain)
-        self.file_upload_layout.addLayout(self.checkbox_layout)
-        self.file_upload_layout.addWidget(self.days_input)
+        # self.file_upload_layout.addLayout(self.checkbox_layout)
+        # self.file_upload_layout.addWidget(self.days_input)
+        self.file_upload_layout.addLayout(self.param_input_layout)
         self.file_upload_layout.addLayout(self.upload_button_layout)
         self.file_upload_layout.addWidget(self.upload_file_prompt)
         # self.file_upload_layout.addWidget(self.select_file_button)
@@ -140,9 +150,9 @@ class PredictionGui(QMainWindow):
         self.select_model_explain.setStyleSheet("color:grey")
 
         self.model_selector = QComboBox()
-        self.model_selector.addItem("SIR")
-        self.model_selector.addItem("SEIR")
-        self.model_selector.addItem("SEIR-2")
+        self.model_selector.addItem("SIAR")
+        self.model_selector.addItem("SEIAR")
+        self.model_selector.addItem("SEIAR-2")
         self.model_selector.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
         self.model_sector_spacer = QSpacerItem(30, 70, QSizePolicy.Fixed, QSizePolicy.Fixed)

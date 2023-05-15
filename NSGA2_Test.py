@@ -187,6 +187,10 @@ class SIRModel(ea.Problem):  # 继承Problem父类
             loss3.append(loss_eva(rmse_loss, sol[:, 4], self.y_data.heal.to_numpy()))  # R_q
         pop.ObjV = np.array([loss1, loss2, loss3]).T
 
+    def calReferObjV(self):  # 设定目标数参考值（本问题目标函数参考值设定为理论最优值）,这个函数其实可以不要
+        referenceObjV = np.array([[0, 0, 0]])
+        return referenceObjV
+
     # def aimFunc(self, pop):  # 目标函数
     #     x1 = pop.Phen[:, [0]]
     #     x2 = pop.Phen[:, [1]]
@@ -280,6 +284,10 @@ class SEIRModel(ea.Problem):  # 继承Problem父类
             loss3.append(loss_eva(rmse_loss, sol[:, 6], self.y_data.heal.to_numpy()))  # R_q
         pop.ObjV = np.array([loss1, loss2, loss3]).T
 
+    def calReferObjV(self):  # 设定目标数参考值（本问题目标函数参考值设定为理论最优值）,这个函数其实可以不要
+        referenceObjV = np.array([[0, 0, 0]])
+        return referenceObjV
+
 
 class SEAIRModel(ea.Problem):  # 继承Problem父类
     file_path = "./CN_COVID_data/domestic_data.csv"
@@ -313,7 +321,7 @@ class SEAIRModel(ea.Problem):  # 继承Problem父类
         Dim = 15  # 初始化Dim（决策变量维数）
         varTypes = [0] * Dim  # 初始化varTypes（决策变量的类型，元素为0表示对应的变量是连续的；1表示是离散的）
         lb = [0] * Dim  # 决策变量下界
-        ub = [1] * Dim  # 决策变量上界
+        ub = [1] * (Dim-2) + [100, 10]  # 决策变量上界
         lbin = [1] * Dim  # 决策变量下边界
         ubin = [1] * Dim  # 决策变量上边界
         # 调用父类构造方法完成实例化
@@ -368,8 +376,8 @@ def plot_graph(sol, model_name, region, t, y_data, num):
     plt.plot(t, y_data.now_confirm, 'g', label='Real_Inf_q')
     # plt.plot(t, sol[:, num[1]], '--r', label='Pre_Asy_q')
     # plt.plot(t, y_data.now_asy, 'r', label='Real_Asy_q')
-    # plt.plot(t, sol[:, num[2]], '--y', label='Pre_Removed_q')
-    # plt.plot(t, y_data.heal, 'y', label='Real_Removed_q')
+    plt.plot(t, sol[:, num[2]], '--y', label='Pre_Removed_q')
+    plt.plot(t, y_data.heal, 'y', label='Real_Removed_q')
     plt.legend(loc='best')
     plt.xlabel('t')
     plt.grid()
@@ -381,19 +389,19 @@ def plot_graph(sol, model_name, region, t, y_data, num):
 """==========执行脚本=========="""
 if __name__ == '__main__':
     PoolType = "Thread"
-    problem = SIRModel(PoolType)
+    problem = SEIRModel(PoolType)
     # problem = MyProblem()  # 生成问题对象
     # 构建算法
     Encoding = "RI"
     NIND = 100
     # MAXGEN = 600
-    MAXGEN = 50
+    MAXGEN = 200
     print(ea.Population(Encoding=Encoding, NIND=NIND).ChromNum)
     algorithm = ea.moea_NSGA2_templet(problem,
                                       ea.Population(Encoding=Encoding, NIND=NIND),
                                       MAXGEN=MAXGEN,  # 最大进化代数。
                                       logTras=1)  # 表示每隔多少代记录一次日志信息，0表示不记录。
-    algorithm.recOper.XOVR = 0.4
+    # algorithm.recOper.XOVR = 0.4
     # 求解
     # algorithm.verbose = True
     # algorithm.drawing = 1
@@ -403,12 +411,30 @@ if __name__ == '__main__':
     # print(BestIndi.Phen[0])
     res = ea.optimize(algorithm, verbose=True, drawing=1, outputMsg=True, drawLog=True, saveFlag=True,
                       dirName=None)
-    print(res["Vars"][0, :])
+    # print(res["lastPop"].Chrom)
+    # temp_args = res["lastPop"].Chrom[0, :]
 
-    temp_args = res["Vars"][0, :]
-    # sol = odeint(problem.model, problem.y0, problem.t, args=(*temp_args, problem.chi, problem.N_e[problem.region]))
+    file_path = "./CN_COVID_data/domestic_data.csv"
+    region = "上海"
+    start_date = "2022-03-10"
+    end_date = "2022-06-01"
+    days = calc_days(start_date, end_date) - 2
+    y0 = [0, 0, 1, 0, 0, 0, 0, 0]
+    t = np.linspace(0, days, days + 1)
+    y_data = read_file(file_path, region, start_date, end_date)
 
-    # plot_graph(sol, problem.name, problem.region, problem.t, problem.y_data, [3, 5, 6])
-    sol = odeint(problem.model, problem.y0, problem.t, args=(*temp_args, problem.N_e[problem.region]))
-    plot_graph(sol, problem.name, problem.region, problem.t, problem.y_data, [1, 3, 4])
+    for i in range(5):
+        temp_args = res["lastPop"].Chrom[0, :]
+        # temp_args = res["Vars"][i, :]
+        sol = odeint(problem.model, y0, t, args=(*temp_args, problem.chi, problem.N_e[region]))
+        plot_graph(sol, problem.name, region, t, y_data, [3, 5, 6])
+
+    for i in range(5):
+        # temp_args = res["lastPop"].Chrom[0, :]
+        temp_args = res["Vars"][i, :]
+        sol = odeint(problem.model, y0, t, args=(*temp_args, problem.chi, problem.N_e[region]))
+        plot_graph(sol, problem.name, region, t, y_data, [3, 5, 6])
+
+    # sol = odeint(problem.model, problem.y0, problem.t, args=(*temp_args, problem.N_e[problem.region]))
+    # plot_graph(sol, problem.name, problem.region, problem.t, problem.y_data, [1, 3, 4])
 
