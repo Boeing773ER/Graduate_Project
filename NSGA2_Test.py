@@ -298,6 +298,7 @@ class SEAIRModel(ea.Problem):  # 继承Problem父类
     end_date = "2022-06-17"
     days = calc_days(start_date, end_date) - 2
     y0 = [0, 0, 1, 0, 0, 0, 0, 0]
+    # y0 = [548, 4472]
     t = np.linspace(0, days, days + 1)
     y_data = read_file(file_path, region, start_date, end_date)
 
@@ -340,7 +341,6 @@ class SEAIRModel(ea.Problem):  # 继承Problem父类
     def model(self, y, t, rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A, gamma_Aq, z_1, z_2, a, b,
               chi, N_e,):
         E, E_q, I, I_q, A, A_q, R_1, R_2 = y
-
         gamma_Iq = z_1 + z_2 * math.tanh((t - a) / b)
 
         dE = (1 - rho) * phi * (I + epsilon * E + beta * A) * (
@@ -352,7 +352,6 @@ class SEAIRModel(ea.Problem):  # 继承Problem父类
         dA_q = alpha * (1 - eta) * E_q + mu * A - gamma_Aq * A_q
         dR_1 = gamma_Iq * I_q + chi * gamma_Aq * A_q
         dR_2 = gamma_A * A + gamma_I * I + (1 - chi) * gamma_Aq * A_q
-
         return dE, dE_q, dI, dI_q, dA, dA_q, dR_1, dR_2
 
     def aimFunc(self, pop):  # 目标函数
@@ -369,6 +368,66 @@ class SEAIRModel(ea.Problem):  # 继承Problem父类
 
     def calReferObjV(self):  # 设定目标数参考值（本问题目标函数参考值设定为理论最优值）,这个函数其实可以不要
         referenceObjV = np.array([[0, 0, 0]])
+        return referenceObjV
+
+
+class ClassicSIRModel(ea.Problem):  # 继承Problem父类
+    file_path = "./CN_COVID_data/domestic_data.csv"
+    region = "上海"
+    start_date = "2022-03-10"
+    end_date = "2022-04-17"
+    days = calc_days(start_date, end_date) - 2
+    y0 = [548, 4472]
+    t = np.linspace(0, days, days + 1)
+    y_data = read_file(file_path, region, start_date, end_date)
+
+    rho = 0.85
+    gamma_I = 7e-4
+    N_e = {"上海": 2.489e7, "湖北": 5.830e7}
+
+    def __init__(self, PoolType):
+        name = 'classic_SIR'  # 初始化name（函数名称，可以随意设置）
+        M = 2  # 初始化M（目标维数）
+        maxormins = [1] * M  # 初始化maxormins（目标最小最大化标记列表，1：最小化该目标；-1：最大化该目标）
+        Dim = 2  # 初始化Dim（决策变量维数）
+        varTypes = [0] * Dim  # 初始化varTypes（决策变量的类型，元素为0表示对应的变量是连续的；1表示是离散的）
+        lb = [0] * Dim  # 决策变量下界
+        ub = [1] * Dim  # 决策变量上界
+        lbin = [1] * Dim  # 决策变量下边界
+        ubin = [1] * Dim  # 决策变量上边界
+        # 调用父类构造方法完成实例化
+        ea.Problem.__init__(self, name, M, maxormins, Dim, varTypes, lb, ub, lbin, ubin)
+
+        # 设置用多线程还是多进程
+        self.PoolType = PoolType
+        if self.PoolType == 'Thread':
+            self.pool = ThreadPool(2)  # 设置池的大小
+        elif self.PoolType == 'Process':
+            num_cores = int(mp.cpu_count())  # 获得计算机的核心数
+            self.pool = ProcessPool(num_cores)  # 设置池的大小
+
+    def model(self, y, t, phi, gamma_I, N_e):
+        I, R = y
+        dI = phi * (N_e - I - R) - gamma_I * I
+        dR = gamma_I * I
+        return dI, dR
+
+    def aimFunc(self, pop):  # 目标函数
+        vars = pop.Phen
+        rho = vars[:, [0]]
+        gamma_I = vars[:, [1]]
+        loss1 = []
+        loss2 = []
+        # rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A, gamma_Aq, chi, N_e, z_1, z_2, a, b
+        for rho_x, gamma_I_x in zip(rho, gamma_I):
+            # 计算目标函数值
+            sol = odeint(self.model, self.y0, self.t, args=(rho_x[0], gamma_I_x[0], self.N_e[self.region]))
+            loss1.append(loss_eva(rmse_loss, sol[:, 0], self.y_data.now_confirm.to_numpy()))  # I_q
+            loss2.append(loss_eva(rmse_loss, sol[:, 1], self.y_data.heal.to_numpy()))  # R_q
+        pop.ObjV = np.array([loss1, loss2]).T
+
+    def calReferObjV(self):  # 设定目标数参考值（本问题目标函数参考值设定为理论最优值）,这个函数其实可以不要
+        referenceObjV = np.array([[0, 0]])
         return referenceObjV
 
 
@@ -441,7 +500,7 @@ def plot_graph(sol, model_name, region, t, y_data, num):
 #     # plot_graph(sol, problem.name, problem.region, problem.t, problem.y_data, [1, 3, 4])
 
 """==========执行脚本=========="""
-if __name__ == '__main__':
+"""if __name__ == '__main__':
     PoolType = "Thread"
     problem = SIRModel(PoolType)
     # 构建算法
@@ -486,6 +545,63 @@ if __name__ == '__main__':
         temp_args = res["Vars"][i, :]
         sol = odeint(problem.model, y0, t, args=(*temp_args, problem.N_e[region]))
         plot_graph(sol, problem.name, region, t, y_data, [1, 2, 3])
+
+    # sol = odeint(problem.model, problem.y0, problem.t, args=(*temp_args, problem.N_e[problem.region]))
+    # plot_graph(sol, problem.name, problem.region, problem.t, problem.y_data, [1, 3, 4])"""
+"""==========执行脚本=========="""
+if __name__ == '__main__':
+    PoolType = "Thread"
+    problem = ClassicSIRModel(PoolType)
+    # problem = MyProblem()  # 生成问题对象
+    # 构建算法
+    Encoding = "RI"
+    NIND = 100
+    # MAXGEN = 600
+    MAXGEN = 200
+    print(ea.Population(Encoding=Encoding, NIND=NIND).ChromNum)
+    # algorithm = ea.moea_NSGA2_templet(problem,
+    #                                   ea.Population(Encoding=Encoding, NIND=NIND),
+    #                                   MAXGEN=MAXGEN,  # 最大进化代数。
+    #                                   logTras=1)  # 表示每隔多少代记录一次日志信息，0表示不记录。
+    algorithm = ea.moea_PESA2_templet(problem,
+                                      ea.Population(Encoding=Encoding, NIND=NIND),
+                                      MAXGEN=MAXGEN,  # 最大进化代数。
+                                      logTras=1)  # 表示每隔多少代记录一次日志信息，0表示不记录。
+    ea.moea_
+    # algorithm.recOper.XOVR = 0.4
+    # 求解
+    # algorithm.verbose = True
+    # algorithm.drawing = 1
+    # [BestIndi, population] = algorithm.run()  # 执行算法模板，得到最优个体以及最后一代种群
+    # BestIndi.save()  # 把最优个体的信息保存到文件中
+    # print(type(BestIndi))
+    # print(BestIndi.Phen[0])
+    res = ea.optimize(algorithm, verbose=True, drawing=1, outputMsg=True, drawLog=True, saveFlag=True,
+                      dirName=None)
+    # print(res["lastPop"].Chrom)
+    # temp_args = res["lastPop"].Chrom[0, :]
+
+    file_path = "./CN_COVID_data/domestic_data.csv"
+    region = "上海"
+    start_date = "2022-03-10"
+    end_date = "2022-06-01"
+    days = calc_days(start_date, end_date) - 2
+    # y0 = [0, 0, 1, 0, 0, 0, 0, 0]
+    y0 = [646, 4067]
+    t = np.linspace(0, days, days + 1)
+    y_data = read_file(file_path, region, start_date, end_date)
+
+    for i in range(5):
+        temp_args = res["lastPop"].Chrom[0, :]
+        # temp_args = res["Vars"][i, :]
+        sol = odeint(problem.model, y0, t, args=(*temp_args, problem.N_e[region]))
+        plot_graph(sol, problem.name, region, t, y_data, [0, 0, 1])
+
+    for i in range(5):
+        # temp_args = res["lastPop"].Chrom[0, :]
+        temp_args = res["Vars"][i, :]
+        sol = odeint(problem.model, y0, t, args=(*temp_args, problem.N_e[region]))
+        plot_graph(sol, problem.name, region, t, y_data, [0, 0, 1])
 
     # sol = odeint(problem.model, problem.y0, problem.t, args=(*temp_args, problem.N_e[problem.region]))
     # plot_graph(sol, problem.name, problem.region, problem.t, problem.y_data, [1, 3, 4])
