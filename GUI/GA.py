@@ -15,17 +15,12 @@ def calc_days(start, end):
     return (end_date - start_date).days
 
 
-def read_file(file_path, start_date, end_date):
-    # print(start_date, end_date)
+def read_file(file_path):
     data_file = pd.read_csv(file_path)
-
-    sub_data = data_file.loc[data_file.province == "上海", :]
-    sub_data = sub_data.loc[sub_data.date > start_date, :]
-    sub_data = sub_data.loc[end_date > sub_data.date, :]
     ydata = pd.DataFrame()
-    ydata["now_confirm"] = sub_data["now_confirm"]
-    ydata["heal"] = sub_data["heal"]
-    ydata["now_asy"] = sub_data["now_asy"]
+    ydata["now_confirm"] = data_file["Infected"]
+    ydata["heal"] = data_file["Healed"]
+    ydata["now_asy"] = data_file["Asymptom"]
     return ydata
 
 
@@ -64,18 +59,21 @@ def plot_graph(file_name, sol, model_name, t, y_data, num):
     plt.show()
 
 
-class SEAIRmodel():
+class SEAIRVmodel():
 
-    def __init__(self, file_path, region_population, start_date, end_date, test_end_date):
-        self.model_name = "SEAIR"
+    def __init__(self, file_path, region_population, pre_days, data_type):
+        self.model_name = "SEIAR_V"
         self.file_path = file_path
-        self.start_date = start_date
-        self.end_date = end_date
-        self.plot_end_date = test_end_date
-        days = calc_days(start_date, end_date) - 2
+        self.y_data = read_file(file_path)
+        self.pre_days = pre_days
+        days = len(self.y_data)-1
+        print(days)
+
+        self.data_type = data_type
 
         self.y0 = [0, 0, 1, 0, 0, 0, 0, 0]
         self.t = np.linspace(0, days, days + 1)
+        print(self.t)
 
         self.rho = 0.85
         self.phi = 3.696e-5
@@ -170,7 +168,7 @@ class SEAIRmodel():
 
         """ ===========遗传算法参数设置==========="""
         self.NIND = 100  # 种群个体数目
-        self.MAXGEN = 200  # 最大遗传代数
+        self.MAXGEN = 50  # 最大遗传代数
         self.maxormins = np.array([1])  # 1：目标函数最小化，-1：目标函数最大化
         self.select_style = 'rws'  # 轮盘赌选择
         self.rec_style = 'xovdp'  # 两点交叉
@@ -180,8 +178,6 @@ class SEAIRmodel():
         self.pm = 1 / self.Lind  # 变异概率
         self.obj_trace = np.zeros((self.MAXGEN, 2))
         self.var_trace = np.zeros((self.MAXGEN, int(self.Lind)))
-
-        self.y_data = read_file(file_path, start_date, end_date)
 
     def model(self, y, t, rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A, gamma_Aq, z_1, z_2, a, b, chi, N_e):
         E, E_q, I, I_q, A, A_q, R_1, R_2 = y
@@ -215,8 +211,10 @@ class SEAIRmodel():
             loss1 = loss_eva(rmse_loss, I_q, self.y_data.now_confirm.to_numpy())
             loss2 = loss_eva(rmse_loss, A_q, self.y_data.now_asy.to_numpy())
             loss3 = loss_eva(rmse_loss, R_q, self.y_data.heal.to_numpy())
-            loss = np.mean([loss1, loss2, loss3])
+            # loss = np.mean([loss1, loss2, loss3])
             # loss = np.mean([loss1, loss3])
+            loss = (loss1 * self.data_type[0] + loss2 * self.data_type[1] + loss3 * self.data_type[2]) / \
+                   (self.data_type[0] + self.data_type[1] + self.data_type[2])
             f.append([loss])
         f = np.array(f)
         return f, CV  # 返回目标函数值矩阵
@@ -251,6 +249,265 @@ class SEAIRmodel():
         variable = variable[0, :]
         sol = odeint(self.model, self.y0, t, args=(*variable, self.chi, self.N_e))
         plot_graph(log_file_name, sol, self.model_name, t, y_data, [3, 5, 6])
+
+    def start_GA(self, iter_round):
+        print("in func start_GA")
+
+        """=========================开始遗传算法进化========================"""
+        start_time = time.time()  # 开始计时
+        Chrom = ea.crtpc(self.Encoding, self.NIND, self.FieldD)  # 生成种群染色体矩阵
+        variable = ea.bs2ri(Chrom, self.FieldD)  # 对初始种群进行解码
+        CV = np.zeros((self.NIND, 1))  # 初始化一个CV矩阵（此时因为未确定个体是否满足约束条件，因此初始化元素为0，暂认为所有个体是可行解个体）
+        ObjV, CV = self.aim(variable, CV)  # 计算初始种群个体的目标函数值
+        FitnV = ea.ranking(ObjV, CV, self.maxormins)  # 根据目标函数大小分配适应度值
+        best_ind = np.argmax(FitnV)  # 计算当代最优个体的序号
+        # 开始进化
+        print("before for")
+        for gen in range(self.MAXGEN):
+            SelCh = Chrom[ea.selecting(self.select_style, FitnV, self.NIND - 1), :]  # 选择
+            SelCh = ea.recombin(self.rec_style, SelCh, self.pc)  # 重组
+            SelCh = ea.mutate(self.mut_style, self.Encoding, SelCh, self.pm)  # 变异
+            # 把父代精英个体与子代的染色体进行合并，得到新一代种群
+            Chrom = np.vstack([Chrom[best_ind, :], SelCh])
+            Phen = ea.bs2ri(Chrom, self.FieldD)  # 对种群进行解码(二进制转十进制)
+            ObjV, CV = self.aim(Phen, CV)  # 求种群个体的目标函数值
+            FitnV = ea.ranking(ObjV, CV, self.maxormins)  # 根据目标函数大小分配适应度值
+            # 记录
+            best_ind = np.argmax(FitnV)  # 计算当代最优个体的序号
+            self.obj_trace[gen, 0] = np.sum(ObjV) / ObjV.shape[0]  # 记录当代种群的目标函数均值
+            self.obj_trace[gen, 1] = ObjV[best_ind]  # 记录当代种群最优个体目标函数值
+            self.var_trace[gen, :] = Chrom[best_ind, :]  # 记录当代种群最优个体的染色体
+            print(time.ctime())
+            print("Gen:", gen)
+            print(ObjV[best_ind])
+        # 进化完成
+        end_time = time.time()  # 结束计时
+
+        """============================输出结果============================"""
+        best_gen = np.argmin(self.obj_trace[:, [1]])
+        print("最优解代数：", best_gen)
+
+        temp_t = time.localtime()
+        day = temp_t.tm_mday
+        hour = temp_t.tm_hour
+        minute = temp_t.tm_min
+        log_file_name = str(iter_round) + '-' + self.model_name + '-'
+        # log_file_name += region + '-'
+        log_file_name += str(self.MAXGEN) + '-'
+        log_file_name += str(int(self.obj_trace[best_gen, 1])) + '-'
+        log_file_name += str(day) + '_' + str(hour) + '_' + str(minute)
+
+        # ea.trcplot(self.obj_trace, [['Average value of population', 'Population optimal individual value']],
+        #            save_path="../img/track-"+log_file_name+' ')  # 绘制图像
+        # np.savetxt("../log/obj_trace_"+log_file_name+".csv", self.obj_trace, delimiter=',')
+
+        with open("../log/" + log_file_name + ".txt", mode='w', encoding="utf-8") as log_file:
+            self.write_param(log_file)
+            temp_str = '最优解的目标函数值：' + str(self.obj_trace[best_gen, 1])
+            print(temp_str)
+            log_file.writelines(temp_str + "\n")
+            variable = ea.bs2ri(self.var_trace[[best_gen], :], self.FieldD)  # 解码得到表现型（即对应的决策变量值）
+            print('最优解的决策变量值为：')
+            log_file.writelines('最优解的决策变量值为：' + "\n")
+            for i in range(variable.shape[1]):
+                temp_str = 'x' + str(i) + '=' + str(variable[0, i])
+                print(temp_str)
+                log_file.writelines(temp_str + "\n")
+            log_file.writelines("\n")
+            print('用时：', end_time - start_time, '秒')
+
+        variables = variable[0, :]
+
+        days = len(self.y_data) + self.pre_days
+        pre_t = np.linspace(0, days, days + 1)
+
+        sol = odeint(self.model, self.y0, pre_t, args=(*variables, self.chi, self.N_e))
+        # 保存数据值csv
+        # np.savetxt("../log/" + log_file_name + ".csv", sol, delimiter=',', header="E, Eq, I, Iq, A, Aq, R1, R2",
+        #            comments="")
+
+        # self.draw_result(self.file_path, log_file_name, self.start_date, self.plot_end_date, variable)
+        return pre_t, np.array([sol[:, 3], sol[:, 5], sol[:, 6]]), variables
+
+
+class SEAIRmodel():
+    def __init__(self, file_path, region_population, pre_days, data_type):
+        self.model_name = "SEAIR"
+        self.file_path = file_path
+        self.y_data = read_file(file_path)
+        self.pre_days = pre_days
+        days = len(self.y_data) - 1
+        print(days)
+
+        self.data_type = data_type
+
+        self.y0 = [0, 0, 1, 0, 0, 0, 0, 0]
+        self.t = np.linspace(0, days, days + 1)
+        print(self.t)
+
+        self.rho = 0.85
+        self.phi = 3.696e-5
+        self.beta = 0.4
+        self.epsilon = 0.5
+        self.alpha = 0.2
+        self.eta = 0.75
+        self.theta = 0.75
+        self.mu = 0.2
+        self.gamma_I = 7e-4
+        self.gamma_A = 1e-4
+        self.gamma_Aq = 0.03
+        self.chi = 0
+        self.N_e = region_population
+        self.model_name = "SEIAR"
+
+        """ ===========变量设置==========="""
+        params_count = 12
+        x1 = [0, 1]
+        x2 = [0, 1]  # 第一个决策变量范围
+        x3 = [0, 1]
+        x4 = [0, 1]
+        x5 = [0, 1]
+        x6 = [0, 1]
+        x7 = [0, 1]
+        x8 = [0, 1]
+        x9 = [0, 1]
+        x10 = [0, 1]
+        x11 = [0, 1]
+        x12 = [0, 1]
+
+        b1 = [1, 1]  # 第一个决策变量边界，1表示包含范围的边界，0表示不包含
+        b2 = [1, 1]
+        b3 = [1, 1]
+        b4 = [1, 1]
+        b5 = [1, 1]
+        b6 = [1, 1]
+        b7 = [1, 1]
+        b8 = [1, 1]
+        b9 = [1, 1]
+        b10 = [1, 1]
+        b11 = [1, 1]
+        b12 = [1, 1]
+
+        ranges = np.vstack([x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12]).T  # 生成自变量的范围矩阵，使得第一行为所有决策变量的下界，第二行为上界
+        borders = np.vstack([b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12]).T  # 生成自变量的边界矩阵
+        varTypes = np.array(np.zeros(params_count))  # 决策变量的类型，0表示连续，1表示离散
+
+        # ranges = np.vstack([x1, x2, x3, x4, x5, x6]).T  # 生成自变量的范围矩阵，使得第一行为所有决策变量的下界，第二行为上界
+        # borders = np.vstack([b1, b2, b3, b4, b5, b6]).T  # 生成自变量的边界矩阵
+        # varTypes = np.array([0, 0, 0, 0, 0, 0])  # 决策变量的类型，0表示连续，1表示离散
+
+        """ ===========染色体编码设置==========="""
+        self.Encoding = 'BG'  # 表示采用“实整数编码”，即变量可以是连续的也可以是离散的
+        codes = np.zeros(params_count)  # 决策变量的编码方式，0表示决策变量使用二进制编码
+        precisions = []
+        for i in range(params_count):
+            precisions.append(4)  # 决策变量的编码精度，表示二进制编码串解码后能表示的决策变量的精度可达到小数点后6位
+        scales = np.zeros(params_count)  # 0表示采用算术刻度，1表示采用对数刻度
+        # codes = [0, 0, 0, 0, 0, 0]  # 决策变量的编码方式，设置两个0表示两个决策变量均使用二进制编码
+        # precisions = [4, 4, 4, 4, 4, 4]  # 决策变量的编码精度，表示二进制编码串解码后能表示的决策变量的精度可达到小数点后6位
+        # scales = [0, 0, 0, 0, 0, 0]  # 0表示采用算术刻度，1表示采用对数刻度
+
+        self.FieldD = ea.crtfld(self.Encoding, varTypes, ranges, borders, precisions, codes, scales)
+
+
+        """ ===========遗传算法参数设置==========="""
+        self.NIND = 100  # 种群个体数目
+        self.MAXGEN = 50  # 最大遗传代数
+        self.maxormins = np.array([1])  # 1：目标函数最小化，-1：目标函数最大化
+        self.select_style = 'rws'  # 轮盘赌选择
+        self.rec_style = 'xovdp'  # 两点交叉
+        self.mut_style = 'mutbin'  # 二进制染色体的变异算子
+        self.Lind = int(np.sum(self.FieldD[0, :]))  # 染色体长度
+        self.pc = 0.5  # 交叉概率
+        self.pm = 1 / self.Lind  # 变异概率
+        self.obj_trace = np.zeros((self.MAXGEN, 2))
+        self.var_trace = np.zeros((self.MAXGEN, int(self.Lind)))
+
+    def model(self, y, t, rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A, gamma_Aq, gamma_Iq, chi, N_e):
+        E, E_q, I, I_q, A, A_q, R_1, R_2 = y
+
+        dE = (1 - rho) * phi * (I + epsilon * E + beta * A) * (
+                    N_e - E - E_q - I - I_q - A - A_q - R_1 - R_2) - alpha * E
+        dE_q = rho * phi * (I + epsilon * E + beta * A) * (N_e - E - E_q - I - I_q - A - A_q - R_1 - R_2) - alpha * E_q
+        dI = alpha * eta * E - theta * I - gamma_I * I
+        dI_q = alpha * eta * E_q + theta * I - gamma_Iq * I_q
+        dA = alpha * (1 - eta) * E - mu * A - gamma_A * A
+        dA_q = alpha * (1 - eta) * E_q + mu * A - gamma_Aq * A_q
+        dR_1 = gamma_Iq * I_q + chi * gamma_Aq * A_q
+        dR_2 = gamma_A * A + gamma_I * I + (1 - chi) * gamma_Aq * A_q
+
+        return dE, dE_q, dI, dI_q, dA, dA_q, dR_1, dR_2
+
+    # 种群染色体矩阵(Chrom)
+    # 种群表现型矩阵(Phen)
+    # 种群个体违反约束程度矩阵(CV)
+    # 种群适应度(FitnV)
+    def aim(self, Phen, CV):
+        # rho = Phen[:, [0]]
+        # phi = Phen[:, [1]]
+        # beta = Phen[:, [2]]
+        # epsilon = Phen[:, [3]]
+        # alpha = Phen[:, [4]]
+        # eta = Phen[:, [5]]
+        # theta = Phen[:, [6]]
+        # mu = Phen[:, [7]]
+        # gamma_I = Phen[:, [8]]
+        # gamma_A = Phen[:, [9]]
+        # gamma_Aq = Phen[:, [10]]
+        # gamma_Iq = Phen[:, [11]]
+
+        # rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A, gamma_Aq, gamma_Iq, chi, N_e
+
+        # for rho_x, phi_x, beta_x, epsilon_x, alpha_x, eta_x, theta_x, mu_x, gamma_I_x, gamma_A_x, gamma_Aq_x, gamma_Iq_x in \
+        #         zip(rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A, gamma_Aq, gamma_Iq):
+        #     # 计算目标函数值
+        #     sol = odeint(model, y0, t, args=(rho_x[0], phi_x[0], beta_x[0], epsilon_x[0], alpha_x[0], eta_x[0], theta_x[0],
+        #                                      mu_x[0], gamma_I_x[0], gamma_A_x[0], gamma_Aq_x[0], gamma_Iq_x[0], chi, N_e[region]))
+        f = []
+        for phen in Phen:
+            # 计算目标函数值
+            sol = odeint(self.model, self.y0, self.t, args=(*phen, self.chi, self.N_e))
+            I_q = sol[:, 3]
+            A_q = sol[:, 5]
+            R_q = sol[:, 6]
+
+            loss1 = loss_eva(rmse_loss, I_q, self.y_data.now_confirm.to_numpy())
+            loss2 = loss_eva(rmse_loss, A_q, self.y_data.now_asy.to_numpy())
+            loss3 = loss_eva(rmse_loss, R_q, self.y_data.heal.to_numpy())
+            loss = np.mean([loss1, loss2, loss3])
+            # loss = np.mean([loss1, loss3])
+            f.append([loss])
+        f = np.array(f)
+        return f, CV  # 返回目标函数值矩阵
+
+    def write_param(self, log_file: _io.TextIOWrapper):
+        log_file.writelines(self.region)
+        temp_str = "\ninit setting:\n"
+        temp_str += "rho: " + str(self.rho) + "\n"
+        temp_str += "phi: " + str(self.phi) + "\n"
+        temp_str += "beta: " + str(self.beta) + "\n"
+        temp_str += "epsilon: " + str(self.epsilon) + "\n"
+        temp_str += "alpha: " + str(self.alpha) + "\n"
+        temp_str += "eta: " + str(self.eta) + "\n"
+        temp_str += "theta: " + str(self.theta) + "\n"
+        temp_str += "mu: " + str(self.mu) + "\n"
+        temp_str += "gamma_I: " + str(self.gamma_I) + "\n"
+        temp_str += "gamma_A: " + str(self.gamma_A) + "\n"
+        temp_str += "gamma_Aq: " + str(self.gamma_Aq) + "\n"
+        temp_str += "gamma_Iq: " + str(self.gamma_Iq) + "\n"
+        temp_str += "chi: " + str(self.chi) + "\n"
+        temp_str += "N_e: " + str(self.N_e) + "\n"
+        log_file.writelines(temp_str)
+
+    def draw_result(self, file_path, log_file_name, region, start_date, end_date, variable):
+        y_data = read_file(file_path, region, start_date, end_date)
+        days = calc_days(start_date, end_date) - 2
+        y0 = [0, 0, 1, 0, 0, 0, 0, 0]
+        t = np.linspace(0, days, days + 1)
+        sol = odeint(self.model, y0, t, args=(variable[0, 0], variable[0, 1], variable[0, 2], variable[0, 3], variable[0, 4],
+                                         variable[0, 5], variable[0, 6], variable[0, 7], variable[0, 8], variable[0, 9],
+                                         variable[0, 10], variable[0, 11], self.chi, self.N_e[region]))
+        plot_graph(log_file_name, sol, self.model_name, region, t, y_data, [3, 5, 6])
 
     def start_GA(self, iter_round):
         """=========================开始遗传算法进化========================"""
@@ -291,14 +548,14 @@ class SEAIRmodel():
         hour = temp_t.tm_hour
         minute = temp_t.tm_min
         log_file_name = str(iter_round) + '-' + self.model_name + '-'
-        # log_file_name += region + '-'
+        log_file_name += self.region + '-'
         log_file_name += str(self.MAXGEN) + '-'
         log_file_name += str(int(self.obj_trace[best_gen, 1])) + '-'
         log_file_name += str(day) + '_' + str(hour) + '_' + str(minute)
 
-        ea.trcplot(self.obj_trace, [['Average value of population', 'Population optimal individual value']],
-                   save_path="../img/track-"+log_file_name+' ')  # 绘制图像
-        np.savetxt("../log/obj_trace_"+log_file_name+".csv", self.obj_trace, delimiter=',')
+        # ea.trcplot(self.obj_trace, [['Average value of population', 'Population optimal individual value']],
+        #            save_path="../img/track-" + log_file_name + ' ')  # 绘制图像
+        # np.savetxt("../log/obj_trace_" + log_file_name + ".csv", self.obj_trace, delimiter=',')
 
         with open("../log/" + log_file_name + ".txt", mode='w', encoding="utf-8") as log_file:
             self.write_param(log_file)
@@ -308,20 +565,275 @@ class SEAIRmodel():
             variable = ea.bs2ri(self.var_trace[[best_gen], :], self.FieldD)  # 解码得到表现型（即对应的决策变量值）
             print('最优解的决策变量值为：')
             log_file.writelines('最优解的决策变量值为：' + "\n")
+            var_name = ["rho", "phi", "beta", "epsilon", "alpha", "eta", "theta", "mu", "gamma_I", "gamma_A",
+                        "gamma_Aq",
+                        "gamma_Iq"]
             for i in range(variable.shape[1]):
-                temp_str = 'x' + str(i) + '=' + str(variable[0, i])
+                temp_str = var_name[i] + ': ' + str(variable[0, i])
+                print(temp_str)
+                log_file.writelines(temp_str + "\n")
+            log_file.writelines("\n")
+            print('用时：', end_time - start_time, '秒')
+
+        """sol = odeint(self.model, self.y0, self.t, args=(variable[0, 0], variable[0, 1], variable[0, 2], variable[0, 3], variable[0, 4],
+                                         variable[0, 5], variable[0, 6], variable[0, 7], variable[0, 8], variable[0, 9],
+                                         variable[0, 10], variable[0, 11], self.chi, self.N_e[self.region]))
+
+        np.savetxt("../log/" + log_file_name + ".csv", sol, delimiter=',', header="E, Eq, I, Iq, A, Aq, R1, R2",
+                   comments="")"""
+        variables = variable[0, :]
+
+        days = len(self.y_data) + self.pre_days
+        pre_t = np.linspace(0, days, days + 1)
+
+        sol = odeint(self.model, self.y0, pre_t, args=(*variables, self.chi, self.N_e))
+        return pre_t, np.array([sol[:, 3], sol[:, 5], sol[:, 6]]), variables
+
+
+class SIARmodel():
+    def __init__(self, file_path, region_population, pre_days, data_type):
+        self.model_name = "SAIR"
+        self.file_path = file_path
+        self.y_data = read_file(file_path)
+        self.pre_days = pre_days
+        days = len(self.y_data) - 1
+
+        self.data_type = data_type
+
+        self.y0 = [1, 0, 0, 0, 0, 0]
+        self.t = np.linspace(0, days, days + 1)
+
+        self.rho = 0.85
+        self.phi = 3.696e-5
+        self.beta = 0.4
+        self.eta = 0.75
+        self.theta = 0.75
+        self.mu = 0.2
+        self.gamma_I = 7e-4
+        self.gamma_A = 1e-4
+        self.gamma_Aq = 0.03
+        self.gamma_Iq = 0.05
+        self.N_e = region_population
+
+        """ ===========变量设置==========="""
+        params_count = 10
+        x1 = [0, 1]
+        x2 = [0, 1]  # 第一个决策变量范围
+        x3 = [0, 1]
+        x4 = [0, 1]
+        x5 = [0, 1]
+        x6 = [0, 1]
+        x7 = [0, 1]
+        x8 = [0, 1]
+        x9 = [0, 1]
+        x10 = [0, 1]
+
+        b1 = [1, 1]  # 第一个决策变量边界，1表示包含范围的边界，0表示不包含
+        b2 = [1, 1]
+        b3 = [1, 1]
+        b4 = [1, 1]
+        b5 = [1, 1]
+        b6 = [1, 1]
+        b7 = [1, 1]
+        b8 = [1, 1]
+        b9 = [1, 1]
+        b10 = [1, 1]
+
+        ranges = np.vstack([x1, x2, x3, x4, x5, x6, x7, x8, x9, x10]).T  # 生成自变量的范围矩阵，使得第一行为所有决策变量的下界，第二行为上界
+        borders = np.vstack([b1, b2, b3, b4, b5, b6, b7, b8, b9, b10]).T  # 生成自变量的边界矩阵
+        varTypes = np.array(np.zeros(params_count))  # 决策变量的类型，0表示连续，1表示离散
+
+        # ranges = np.vstack([x1, x2, x3, x4, x5, x6]).T  # 生成自变量的范围矩阵，使得第一行为所有决策变量的下界，第二行为上界
+        # borders = np.vstack([b1, b2, b3, b4, b5, b6]).T  # 生成自变量的边界矩阵
+        # varTypes = np.array([0, 0, 0, 0, 0, 0])  # 决策变量的类型，0表示连续，1表示离散
+
+        # TODO: 运行时报错
+        # log_file_name += str(int(obj)trace[best_gen, 1])) + '-'
+
+        """ ===========染色体编码设置==========="""
+        self.Encoding = 'BG'  # 表示采用“实整数编码”，即变量可以是连续的也可以是离散的
+        codes = np.zeros(params_count)  # 决策变量的编码方式，0表示决策变量使用二进制编码
+        precisions = []
+        for i in range(params_count):
+            precisions.append(4)  # 决策变量的编码精度，表示二进制编码串解码后能表示的决策变量的精度可达到小数点后6位
+        scales = np.zeros(params_count)  # 0表示采用算术刻度，1表示采用对数刻度
+        # codes = [0, 0, 0, 0, 0, 0]  # 决策变量的编码方式，设置两个0表示两个决策变量均使用二进制编码
+        # precisions = [4, 4, 4, 4, 4, 4]  # 决策变量的编码精度，表示二进制编码串解码后能表示的决策变量的精度可达到小数点后6位
+        # scales = [0, 0, 0, 0, 0, 0]  # 0表示采用算术刻度，1表示采用对数刻度
+
+        self.FieldD = ea.crtfld(self.Encoding, varTypes, ranges, borders, precisions, codes, scales)
+
+        """ ===========遗传算法参数设置==========="""
+        self.NIND = 100  # 种群个体数目
+        self.MAXGEN = 200  # 最大遗传代数
+        self.maxormins = np.array([1])  # 1：目标函数最小化，-1：目标函数最大化
+        self.select_style = 'rws'  # 轮盘赌选择
+        self.rec_style = 'xovdp'  # 两点交叉
+        self.mut_style = 'mutbin'  # 二进制染色体的变异算子
+        Lind = int(np.sum(self.FieldD[0, :]))  # 染色体长度
+        print(self.FieldD)
+        self.pc = 0.5  # 交叉概率
+        self.pm = 1 / Lind  # 变异概率
+        self.obj_trace = np.zeros((self.MAXGEN, 2))
+        self.var_trace = np.zeros((self.MAXGEN, int(Lind)))
+
+    def model(self, y, t, rho, phi, beta, eta, theta, mu, gamma_I, gamma_A, gamma_Aq, gamma_Iq, N_e):
+        I, I_q, A, A_q, R_1, R_2 = y
+
+        dI = (1 - rho) * phi * (I + beta * A) * eta * (N_e - I - I_q - A - A_q - R_1 - R_2) - theta * I - gamma_I * I
+        dI_q = rho * phi * (I + beta * A) * eta * (N_e - I - I_q - A - A_q - R_1 - R_2) + theta * I - gamma_Iq * I_q
+        dA = (1 - rho) * phi * (I + beta * A) * (1 - eta) * (N_e - I - I_q - A - A_q - R_1 - R_2) - mu * A - gamma_A * A
+        dA_q = rho * phi * (I + beta * A) * (1 - eta) * (N_e - I - I_q - A - A_q - R_1 - R_2) + mu * A - gamma_Aq * A_q
+        dR_1 = gamma_Iq * I_q + gamma_Aq * A_q
+        dR_2 = gamma_A * A + gamma_I * I
+
+        return dI, dI_q, dA, dA_q, dR_1, dR_2
+
+    # 种群染色体矩阵(Chrom)
+    # 种群表现型矩阵(Phen)
+    # 种群个体违反约束程度矩阵(CV)
+    # 种群适应度(FitnV)
+    def aim(self, Phen, CV):
+        rho = Phen[:, [0]]
+        phi = Phen[:, [1]]
+        beta = Phen[:, [2]]
+        eta = Phen[:, [3]]
+        theta = Phen[:, [4]]
+        mu = Phen[:, [5]]
+        gamma_I = Phen[:, [6]]
+        gamma_A = Phen[:, [7]]
+        gamma_Aq = Phen[:, [8]]
+        gamma_Iq = Phen[:, [9]]
+        f = []
+        # rho, phi, beta, eta, theta, mu, gamma_I, gamma_A, gamma_Aq, gamma_Iq
+
+        for rho_x, phi_x, beta_x, eta_x, theta_x, mu_x, gamma_I_x, gamma_A_x, gamma_Aq_x, gamma_Iq_x in \
+                zip(rho, phi, beta, eta, theta, mu, gamma_I, gamma_A, gamma_Aq, gamma_Iq):
+            # 计算目标函数值
+            sol = odeint(self.model, self.y0, self.t, args=(rho_x[0], phi_x[0], beta_x[0], eta_x[0], theta_x[0],
+                                                            mu_x[0], gamma_I_x[0], gamma_A_x[0], gamma_Aq_x[0],
+                                                            gamma_Iq_x[0], self.N_e))
+
+            I_q = sol[:, 1]
+            A_q = sol[:, 3]
+            R_q = sol[:, 4]
+
+            loss1 = loss_eva(rmse_loss, I_q, self.y_data.now_confirm.to_numpy())
+            loss2 = loss_eva(rmse_loss, A_q, self.y_data.now_asy.to_numpy())
+            loss3 = loss_eva(rmse_loss, R_q, self.y_data.heal.to_numpy())
+            # loss = np.mean([loss1, loss2, loss3])
+            # loss = np.mean([loss1, loss3])
+            loss = (loss1*self.data_type[0] + loss2*self.data_type[1] + loss3*self.data_type[2])/\
+                   (self.data_type[0]+self.data_type[1]+self.data_type[2])
+            f.append([loss])
+        f = np.array(f)
+        return f, CV  # 返回目标函数值矩阵
+
+    def write_param(self, log_file: _io.TextIOWrapper):
+        log_file.writelines(self.region)
+        temp_str = "\ninit setting:\n"
+        temp_str += "rho: " + str(self.rho) + "\n"
+        temp_str += "phi: " + str(self.phi) + "\n"
+        temp_str += "beta: " + str(self.beta) + "\n"
+        temp_str += "eta: " + str(self.eta) + "\n"
+        temp_str += "theta: " + str(self.theta) + "\n"
+        temp_str += "mu: " + str(self.mu) + "\n"
+        temp_str += "gamma_I: " + str(self.gamma_I) + "\n"
+        temp_str += "gamma_A: " + str(self.gamma_A) + "\n"
+        temp_str += "gamma_Aq: " + str(self.gamma_Aq) + "\n"
+        temp_str += "gamma_Iq: " + str(self.gamma_Iq) + "\n"
+        temp_str += "N_e: " + str(self.N_e) + "\n"
+        log_file.writelines(temp_str)
+
+    def draw_result(self, file_path, log_file_name, region, start_date, end_date, variable):
+        y_data = read_file(file_path, region, start_date, end_date)
+        days = calc_days(start_date, end_date) - 2
+        y0 = [1, 0, 0, 0, 0, 0]
+        t = np.linspace(0, days, days + 1)
+        sol = odeint(self.model, y0, t, args=(variable[0, 0], variable[0, 1], variable[0, 2], variable[0, 3], variable[0, 4],
+                                         variable[0, 5], variable[0, 6], variable[0, 7], variable[0, 8], variable[0, 9],
+                                         self.N_e[region]))
+        plot_graph(log_file_name, sol, self.model_name, region, t, y_data, [1, 3, 4])
+
+    def start_GA(self, iter_round):
+        """=========================开始遗传算法进化========================"""
+        start_time = time.time()  # 开始计时
+        print(1)
+        Chrom = ea.crtpc(self.Encoding, self.NIND, self.FieldD)  # 生成种群染色体矩阵
+        print(2)
+        variable = ea.bs2ri(Chrom, self.FieldD)  # 对初始种群进行解码
+        print(3)
+        CV = np.zeros((self.NIND, 1))  # 初始化一个CV矩阵（此时因为未确定个体是否满足约束条件，因此初始化元素为0，暂认为所有个体是可行解个体）
+        print(4)
+        ObjV, CV = self.aim(variable, CV)  # 计算初始种群个体的目标函数值
+        print(5)
+        FitnV = ea.ranking(ObjV, CV, self.maxormins)  # 根据目标函数大小分配适应度值
+        print(6)
+        best_ind = np.argmax(FitnV)  # 计算当代最优个体的序号
+        # 开始进化
+        for gen in range(self.MAXGEN):
+            SelCh = Chrom[ea.selecting(self.select_style, FitnV, self.NIND - 1), :]  # 选择
+            SelCh = ea.recombin(self.rec_style, SelCh, self.pc)  # 重组
+            SelCh = ea.mutate(self.mut_style, self.Encoding, SelCh, self.pm)  # 变异
+            # 把父代精英个体与子代的染色体进行合并，得到新一代种群
+            Chrom = np.vstack([Chrom[best_ind, :], SelCh])
+            Phen = ea.bs2ri(Chrom, self.FieldD)  # 对种群进行解码(二进制转十进制)
+            ObjV, CV = self.aim(Phen, CV)  # 求种群个体的目标函数值
+            FitnV = ea.ranking(ObjV, CV, self.maxormins)  # 根据目标函数大小分配适应度值
+            # 记录
+            best_ind = np.argmax(FitnV)  # 计算当代最优个体的序号
+            self.obj_trace[gen, 0] = np.sum(ObjV) / ObjV.shape[0]  # 记录当代种群的目标函数均值
+            self.obj_trace[gen, 1] = ObjV[best_ind]  # 记录当代种群最优个体目标函数值
+            self.var_trace[gen, :] = Chrom[best_ind, :]  # 记录当代种群最优个体的染色体
+            print(time.ctime())
+            print("Gen:", gen)
+            print(ObjV[best_ind])
+        # 进化完成
+        end_time = time.time()  # 结束计时
+
+        """============================输出结果============================"""
+        best_gen = np.argmin(self.obj_trace[:, [1]])
+        print("最优解代数：", best_gen)
+
+        temp_t = time.localtime()
+        day = temp_t.tm_mday
+        hour = temp_t.tm_hour
+        minute = temp_t.tm_min
+        log_file_name = str(iter_round) + '-' + self.model_name + '-'
+        log_file_name += self.region + '-'
+        log_file_name += str(self.MAXGEN) + '-'
+        log_file_name += str(int(self.obj_trace[best_gen, 1])) + '-'
+        log_file_name += str(day) + '_' + str(hour) + '_' + str(minute)
+
+        # ea.trcplot(self.obj_trace, [['Average value of population', 'Population optimal individual value']],
+        #            save_path="../img/track-" + log_file_name + ' ')  # 绘制图像
+        # np.savetxt("../log/obj_trace_" + log_file_name + ".csv", self.obj_trace, delimiter=',')
+
+        with open("../log/" + log_file_name + ".txt", mode='w', encoding="utf-8") as log_file:
+            self.write_param(log_file)
+            temp_str = '最优解的目标函数值：' + str(self.obj_trace[best_gen, 1])
+            print(temp_str)
+            log_file.writelines(temp_str + "\n")
+            variable = ea.bs2ri(self.var_trace[[best_gen], :], self.FieldD)  # 解码得到表现型（即对应的决策变量值）
+            print('最优解的决策变量值为：')
+            log_file.writelines('最优解的决策变量值为：' + "\n")
+            var_name = ["rho", "phi", "beta", "epsilon", "alpha", "eta", "theta", "mu", "gamma_I", "gamma_A",
+                        "gamma_Aq",
+                        "gamma_Iq"]
+            for i in range(variable.shape[1]):
+                temp_str = var_name[i] + ': ' + str(variable[0, i])
                 print(temp_str)
                 log_file.writelines(temp_str + "\n")
             log_file.writelines("\n")
             print('用时：', end_time - start_time, '秒')
 
         variables = variable[0, :]
-        sol = odeint(self.model, self.y0, self.t, args=(*variables, self.chi, self.N_e))
-        # 保存数据值csv
-        np.savetxt("../log/" + log_file_name + ".csv", sol, delimiter=',', header="E, Eq, I, Iq, A, Aq, R1, R2",
-                   comments="")
 
-        self.draw_result(self.file_path, log_file_name, self.start_date, self.plot_end_date, variable)
+        days = len(self.y_data) + self.pre_days
+        pre_t = np.linspace(0, days, days + 1)
+
+        sol = odeint(self.model, self.y0, pre_t, args=(*variables, self.chi, self.N_e))
+        return pre_t, np.array([sol[:, 1], sol[:, 3], sol[:, 4]]), variables
 
 
 # file_path = "../CN_COVID_data/domestic_data.csv"

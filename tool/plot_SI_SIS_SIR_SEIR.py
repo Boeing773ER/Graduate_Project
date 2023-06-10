@@ -108,7 +108,7 @@ def plot_SEIR():
     t = np.linspace(0, days, days + 1)
     sol = odeint(model_SEIR, y0, t, args=(r, beta, gamma, alpha, N))
 
-    plt.title("Model_SIR")
+    plt.title("Model_SEIR")
     plt.plot(t, sol[:, [0]], 'b', label='Susceptible')
     plt.plot(t, sol[:, [1]], 'g', label='Exposed')
     plt.plot(t, sol[:, [2]], 'r', label='Infected')
@@ -124,5 +124,5 @@ def plot_SEIR():
 if __name__ == '__main__':
     # plot_SI()
     # plot_SIS()
-    plot_SIR()
+    # plot_SIR()
     plot_SEIR()
