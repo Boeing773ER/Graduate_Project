@@ -109,9 +109,11 @@ class SIRModel(ea.Problem):  # 继承Problem父类
     file_path = "./CN_COVID_data/domestic_data.csv"
     region = "上海"
     start_date = "2022-03-10"
-    end_date = "2022-04-17"
+    end_date = "2022-06-17"
     days = calc_days(start_date, end_date) - 2
-    y0 = [1, 0, 0, 0, 0, 0]
+    # y0 = [1, 0, 0, 0, 0, 0]
+    # dI, dI_q, dA, dA_q, dR_1, dR_2
+    y0 = [1, 646, 0, 0, 4067, 0]
     t = np.linspace(0, days, days + 1)
     y_data = read_file(file_path, region, start_date, end_date)
 
@@ -293,7 +295,7 @@ class SEAIRModel(ea.Problem):  # 继承Problem父类
     file_path = "./CN_COVID_data/domestic_data.csv"
     region = "上海"
     start_date = "2022-03-10"
-    end_date = "2022-04-17"
+    end_date = "2022-06-17"
     days = calc_days(start_date, end_date) - 2
     y0 = [0, 0, 1, 0, 0, 0, 0, 0]
     t = np.linspace(0, days, days + 1)
@@ -311,7 +313,7 @@ class SEAIRModel(ea.Problem):  # 继承Problem父类
     gamma_A = 1e-4
     gamma_Aq = 0.03
     gamma_Iq = 0.05
-    chi = 1
+    chi = 0
     N_e = {"上海": 2.489e7, "湖北": 5.830e7}
 
     def __init__(self, PoolType):
@@ -385,23 +387,74 @@ def plot_graph(sol, model_name, region, t, y_data, num):
     plt.show()
 
 
+# """==========执行脚本=========="""
+# if __name__ == '__main__':
+#     PoolType = "Thread"
+#     problem = SIRModel(PoolType)
+#     # problem = MyProblem()  # 生成问题对象
+#     # 构建算法
+#     Encoding = "RI"
+#     NIND = 100
+#     # MAXGEN = 600
+#     MAXGEN = 200
+#     print(ea.Population(Encoding=Encoding, NIND=NIND).ChromNum)
+#     algorithm = ea.moea_NSGA2_templet(problem,
+#                                       ea.Population(Encoding=Encoding, NIND=NIND),
+#                                       MAXGEN=MAXGEN,  # 最大进化代数。
+#                                       logTras=1)  # 表示每隔多少代记录一次日志信息，0表示不记录。
+#     # algorithm.recOper.XOVR = 0.4
+#     # 求解
+#     # algorithm.verbose = True
+#     # algorithm.drawing = 1
+#     # [BestIndi, population] = algorithm.run()  # 执行算法模板，得到最优个体以及最后一代种群
+#     # BestIndi.save()  # 把最优个体的信息保存到文件中
+#     # print(type(BestIndi))
+#     # print(BestIndi.Phen[0])
+#     res = ea.optimize(algorithm, verbose=True, drawing=1, outputMsg=True, drawLog=True, saveFlag=True,
+#                       dirName=None)
+#     # print(res["lastPop"].Chrom)
+#     # temp_args = res["lastPop"].Chrom[0, :]
+#
+#     file_path = "./CN_COVID_data/domestic_data.csv"
+#     region = "上海"
+#     start_date = "2022-03-10"
+#     end_date = "2022-06-17"
+#     days = calc_days(start_date, end_date) - 2
+#     y0 = [0, 0, 1, 0, 0, 0, 0, 0]
+#     # y0 = [1, 0, 0, 0, 0, 0]
+#     t = np.linspace(0, days, days + 1)
+#     y_data = read_file(file_path, region, start_date, end_date)
+#
+#     for i in range(5):
+#         temp_args = res["lastPop"].Chrom[0, :]
+#         # temp_args = res["Vars"][i, :]
+#         sol = odeint(problem.model, y0, t, args=(*temp_args, problem.chi, problem.N_e[region]))
+#         plot_graph(sol, problem.name, region, t, y_data, [3, 5, 6])
+#
+#     for i in range(5):
+#         # temp_args = res["lastPop"].Chrom[0, :]
+#         temp_args = res["Vars"][i, :]
+#         sol = odeint(problem.model, y0, t, args=(*temp_args, problem.chi, problem.N_e[region]))
+#         plot_graph(sol, problem.name, region, t, y_data, [3, 5, 6])
+#
+#     # sol = odeint(problem.model, problem.y0, problem.t, args=(*temp_args, problem.N_e[problem.region]))
+#     # plot_graph(sol, problem.name, problem.region, problem.t, problem.y_data, [1, 3, 4])
 
 """==========执行脚本=========="""
 if __name__ == '__main__':
     PoolType = "Thread"
-    problem = SEIRModel(PoolType)
-    # problem = MyProblem()  # 生成问题对象
+    problem = SIRModel(PoolType)
     # 构建算法
     Encoding = "RI"
     NIND = 100
     # MAXGEN = 600
-    MAXGEN = 200
+    MAXGEN = 15
     print(ea.Population(Encoding=Encoding, NIND=NIND).ChromNum)
     algorithm = ea.moea_NSGA2_templet(problem,
                                       ea.Population(Encoding=Encoding, NIND=NIND),
                                       MAXGEN=MAXGEN,  # 最大进化代数。
                                       logTras=1)  # 表示每隔多少代记录一次日志信息，0表示不记录。
-    # algorithm.recOper.XOVR = 0.4
+    algorithm.recOper.XOVR = 0.4
     # 求解
     # algorithm.verbose = True
     # algorithm.drawing = 1
@@ -417,24 +470,22 @@ if __name__ == '__main__':
     file_path = "./CN_COVID_data/domestic_data.csv"
     region = "上海"
     start_date = "2022-03-10"
-    end_date = "2022-06-01"
+    end_date = "2022-06-17"
     days = calc_days(start_date, end_date) - 2
-    y0 = [0, 0, 1, 0, 0, 0, 0, 0]
+    # y0 = [1, 0, 0, 0, 0, 0]
+    y0 = [1, 646, 0, 0, 4067, 0]
     t = np.linspace(0, days, days + 1)
     y_data = read_file(file_path, region, start_date, end_date)
 
     for i in range(5):
         temp_args = res["lastPop"].Chrom[0, :]
-        # temp_args = res["Vars"][i, :]
-        sol = odeint(problem.model, y0, t, args=(*temp_args, problem.chi, problem.N_e[region]))
-        plot_graph(sol, problem.name, region, t, y_data, [3, 5, 6])
+        sol = odeint(problem.model, y0, t, args=(*temp_args, problem.N_e[region]))
+        plot_graph(sol, problem.name, region, t, y_data, [1, 2, 3])
 
     for i in range(5):
-        # temp_args = res["lastPop"].Chrom[0, :]
         temp_args = res["Vars"][i, :]
-        sol = odeint(problem.model, y0, t, args=(*temp_args, problem.chi, problem.N_e[region]))
-        plot_graph(sol, problem.name, region, t, y_data, [3, 5, 6])
+        sol = odeint(problem.model, y0, t, args=(*temp_args, problem.N_e[region]))
+        plot_graph(sol, problem.name, region, t, y_data, [1, 2, 3])
 
     # sol = odeint(problem.model, problem.y0, problem.t, args=(*temp_args, problem.N_e[problem.region]))
     # plot_graph(sol, problem.name, problem.region, problem.t, problem.y_data, [1, 3, 4])
-

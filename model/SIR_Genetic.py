@@ -31,12 +31,18 @@ dR_2/dt = gamma_A * A + gamma_I * I
 model_name = "SIR"
 file_path = "../CN_COVID_data/domestic_data.csv"
 region = "上海"
+"""start_date = "2022-03-20"
+end_date = "2022-04-17"
+plot_end_date = "2022-05-03" """
 start_date = "2022-03-10"
 end_date = "2022-04-17"
 plot_end_date = "2022-06-17"
 days = calc_days(start_date, end_date) - 2
-
-y0 = [1, 0, 0, 0, 0, 0]
+# dI, dI_q, dA, dA_q, dR_1, dR_2
+# y0 = [1, 7, 1, 2, 3383, 0]
+# y0 = [500, 548, 2800, 2793, 4472, 0]
+y0 = [600, 646, 400, 370, 4067, 0]
+# y0 = [1, 0, 0, 0, 0, 0]
 t = np.linspace(0, days, days + 1)
 
 rho = 0.85
@@ -102,14 +108,14 @@ FieldD = ea.crtfld(Encoding, varTypes, ranges, borders, precisions, codes, scale
 
 """ ===========遗传算法参数设置==========="""
 NIND = 100  # 种群个体数目
-MAXGEN = 1000  # 最大遗传代数
+MAXGEN = 500  # 最大遗传代数
 maxormins = np.array([1])  # 1：目标函数最小化，-1：目标函数最大化
 select_style = 'rws'  # 轮盘赌选择
 rec_style = 'xovdp'  # 两点交叉
 mut_style = 'mutbin'  # 二进制染色体的变异算子
 Lind = int(np.sum(FieldD[0, :]))  # 染色体长度
 print(FieldD)
-pc = 0.5  # 交叉概率
+pc = 0.4  # 交叉概率
 pm = 1 / Lind  # 变异概率
 obj_trace = np.zeros((MAXGEN, 2))
 var_trace = np.zeros((MAXGEN, int(Lind)))
@@ -172,6 +178,9 @@ def aim(Phen, CV):
 def write_param(log_file: _io.TextIOWrapper):
     log_file.writelines(region)
     temp_str = "\ninit setting:\n"
+    temp_str += "y0:" + str(y0) + "\n"
+    temp_str += "start date:" + str(start_date) + "\n"
+    temp_str += "end data:" + str(end_date) + "\n"
     temp_str += "rho: " + str(rho) + "\n"
     temp_str += "phi: " + str(phi) + "\n"
     temp_str += "beta: " + str(beta) + "\n"
@@ -189,7 +198,7 @@ def write_param(log_file: _io.TextIOWrapper):
 def draw_result(file_path, log_file_name, region, start_date, end_date, variable):
     y_data = read_file(file_path, region, start_date, end_date)
     days = calc_days(start_date, end_date) - 2
-    y0 = [1, 0, 0, 0, 0, 0]
+    # y0 = [1, 0, 0, 0, 0, 0]
     t = np.linspace(0, days, days + 1)
     sol = odeint(model, y0, t, args=(variable[0, 0], variable[0, 1], variable[0, 2], variable[0, 3], variable[0, 4],
                                      variable[0, 5], variable[0, 6], variable[0, 7], variable[0, 8], variable[0, 9],
@@ -272,5 +281,5 @@ def start_GA(iter_round):
     draw_result(file_path, log_file_name, region, start_date, plot_end_date, variable)
 
 
-for i in range(10):
+for i in range(1):
     start_GA(i)

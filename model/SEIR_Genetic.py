@@ -40,11 +40,17 @@ file_path = "../CN_COVID_data/domestic_data.csv"
 region = "上海"
 start_date = "2022-03-10"
 end_date = "2022-04-17"
-plot_end_date = "2022-06-17"
+plot_end_date = "2022-05-01"
+"""region = "陕西"
+start_date = "2022-08-11"
+end_date = "2022-09-20"
+plot_end_date = "2022-09-20" """
 days = calc_days(start_date, end_date) - 2
 
-
-y0 = [0, 0, 1, 0, 0, 0, 0, 0]
+# dE, dE_q, dI, dI_q, dA, dA_q, dR_1, dR_2
+# y0 = [0, 0, 1, 7, 1, 2, 3383, 0]
+# y0 = [0, 0, 500, 548, 2800, 2793, 4472, 0]
+y0 = [0, 0, 500, 646, 2800, 370, 4067, 0]
 t = np.linspace(0, days, days + 1)
 
 rho = 0.85
@@ -59,7 +65,7 @@ gamma_I = 7e-4
 gamma_A = 1e-4
 gamma_Aq = 0.03
 chi = 0
-N_e = {"上海": 2.489e7, "湖北": 5.830e7}
+N_e = {"上海": 2.489e7, "湖北": 5.830e7, "陕西": 3.95e7}
 z_1 = 0.045
 z_2 = 0.026
 a = 28
@@ -135,21 +141,21 @@ x13 = [0, 1]
 x14 = [0, 100]
 x15 = [0, 10]
 
-b1 = [1, 1]  # 第一个决策变量边界，1表示包含范围的边界，0表示不包含
-b2 = [1, 1]
-b3 = [1, 1]
-b4 = [1, 1]
-b5 = [1, 1]
-b6 = [1, 1]
-b7 = [1, 1]
-b8 = [1, 1]
-b9 = [1, 1]
-b10 = [1, 1]
-b11 = [1, 1]
-b12 = [1, 1]
-b13 = [1, 1]
-b14 = [1, 1]
-b15 = [1, 1]
+b1 = [0, 0]  # 第一个决策变量边界，1表示包含范围的边界，0表示不包含
+b2 = [0, 0]
+b3 = [0, 0]
+b4 = [0, 0]
+b5 = [0, 0]
+b6 = [0, 0]
+b7 = [0, 0]
+b8 = [0, 0]
+b9 = [0, 0]
+b10 = [0, 0]
+b11 = [0, 0]
+b12 = [0, 0]
+b13 = [0, 0]
+b14 = [0, 0]
+b15 = [0, 0]
 
 ranges = np.vstack([x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15]).T  # 生成自变量的范围矩阵，使得第一行为所有决策变量的下界，第二行为上界
 borders = np.vstack([b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15]).T  # 生成自变量的边界矩阵
@@ -176,15 +182,15 @@ FieldD = ea.crtfld(Encoding, varTypes, ranges, borders, precisions, codes, scale
 
 """ ===========遗传算法参数设置==========="""
 NIND = 100  # 种群个体数目
-MAXGEN = 1000  # 最大遗传代数
+MAXGEN = 600  # 最大遗传代数
 maxormins = np.array([1])  # 1：目标函数最小化，-1：目标函数最大化
-select_style = 'rws'  # 轮盘赌选择
+select_style = 'etour'  # 轮盘赌选择
 rec_style = 'xovdp'  # 两点交叉
 mut_style = 'mutbin'  # 二进制染色体的变异算子
 Lind = int(np.sum(FieldD[0, :]))  # 染色体长度
 print(Lind)
 print(FieldD)
-pc = 0.5  # 交叉概率
+pc = 0.4  # 交叉概率
 pm = 1 / Lind  # 变异概率
 print(pm)
 obj_trace = np.zeros((MAXGEN, 2))
@@ -230,8 +236,6 @@ def aim(Phen, CV):
     # z_2 = Phen[:, [12]]
     # a = Phen[:, [13]]
     # b = Phen[:, [14]]
-    f = []
-
     # rho, phi, beta, epsilon, alpha, eta, theta, mu, gamma_I, gamma_A, gamma_Aq, chi, N_e, z_1, z_2, a, b
 
     # TODO: 之前参数设置错误，SEAIR的实验数据有误
@@ -242,6 +246,7 @@ def aim(Phen, CV):
     #     sol = odeint(model, y0, t, args=(rho_x[0], phi_x[0], beta_x[0], epsilon_x[0], alpha_x[0], eta_x[0], theta_x[0],
     #                                      mu_x[0], gamma_I_x[0], gamma_A_x[0], gamma_Aq[0], z_1_x[0],
     #                                      z_2_x[0], a_x[0], b_x[0], chi, N_e[region]))
+    f = []
     for phen in Phen:
         # 计算目标函数值
         sol = odeint(model, y0, t, args=(*phen, chi, N_e[region]))
@@ -254,6 +259,7 @@ def aim(Phen, CV):
         loss3 = loss_eva(rmse_loss, R_q, y_data.heal.to_numpy())
         loss = np.mean([loss1, loss2, loss3])
         # loss = np.mean([loss1, loss3])
+        # loss = loss1
         f.append([loss])
         # print(f)
     f = np.array(f)
@@ -263,6 +269,9 @@ def aim(Phen, CV):
 def write_param(log_file: _io.TextIOWrapper):
     log_file.writelines(region)
     temp_str = "\ninit setting:\n"
+    temp_str += "y0:" + str(y0) + "\n"
+    temp_str += "start date:" + str(start_date) + "\n"
+    temp_str += "end data:" + str(end_date) + "\n"
     temp_str += "rho: " + str(rho) + "\n"
     temp_str += "phi: " + str(phi) + "\n"
     temp_str += "beta: " + str(beta) + "\n"
@@ -286,12 +295,12 @@ def write_param(log_file: _io.TextIOWrapper):
 def draw_result(file_path, log_file_name, region, start_date, end_date, variable):
     y_data = read_file(file_path, region, start_date, end_date)
     days = calc_days(start_date, end_date) - 2
-    y0 = [0, 0, 1, 0, 0, 0, 0, 0]
+    # y0 = [0, 0, 1, 7, 1, 2, 0, 3383]
     t = np.linspace(0, days, days + 1)
     sol = odeint(model, y0, t, args=(variable[0, 0], variable[0, 1], variable[0, 2], variable[0, 3], variable[0, 4],
                                      variable[0, 5], variable[0, 6], variable[0, 7], variable[0, 8], variable[0, 9],
-                                     variable[0, 10], chi, N_e[region], variable[0, 11], variable[0, 12],
-                                     variable[0, 13], variable[0, 14]))
+                                     variable[0, 10], variable[0, 11], variable[0, 12],
+                                     variable[0, 13], variable[0, 14], chi, N_e[region]))
     plot_graph(log_file_name, sol, model_name, region, t, y_data, [3, 5, 6])
 
 
@@ -360,8 +369,8 @@ def start_GA(iter_round):
 
     sol = odeint(model, y0, t, args=(variable[0, 0], variable[0, 1], variable[0, 2], variable[0, 3], variable[0, 4],
                                      variable[0, 5], variable[0, 6], variable[0, 7], variable[0, 8], variable[0, 9],
-                                     variable[0, 10], chi, N_e[region], variable[0, 11], variable[0, 12],
-                                     variable[0, 13], variable[0, 14]))
+                                     variable[0, 10], variable[0, 11], variable[0, 12],
+                                     variable[0, 13], variable[0, 14], chi, N_e[region]))
     # 保存数据值csv
     np.savetxt("../log/" + log_file_name + ".csv", sol, delimiter=',', header="E, Eq, I, Iq, A, Aq, R1, R2",
                comments="")
@@ -369,5 +378,8 @@ def start_GA(iter_round):
     draw_result(file_path, log_file_name, region, start_date, plot_end_date, variable)
 
 
+# for pc in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
+#     for i in range(10):
+#         start_GA(i)
 for i in range(10):
     start_GA(i)

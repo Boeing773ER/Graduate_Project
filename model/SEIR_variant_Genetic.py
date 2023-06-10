@@ -39,10 +39,18 @@ file_path = "../CN_COVID_data/domestic_data.csv"
 region = "上海"
 start_date = "2022-03-10"
 end_date = "2022-04-17"
-plot_end_date = "2022-06-17"
+plot_end_date = "2022-04-24"
+
+"""region = "陕西"
+start_date = "2022-08-11"
+end_date = "2022-09-20"
+plot_end_date = "2022-09-20" """
 days = calc_days(start_date, end_date) - 2
 
-y0 = [0, 0, 1, 0, 0, 0, 0, 0]
+# dE, dE_q, dI, dI_q, dA, dA_q, dR_1, dR_2
+# y0 = [0, 0, 1, 0, 0, 0, 0, 0]
+# y0 = [0, 0, 1, 7, 1, 2, 3383, 0]
+y0 = [0, 0, 500, 548, 2800, 2793, 4472, 0]
 t = np.linspace(0, days, days + 1)
 
 rho = 0.85
@@ -57,8 +65,8 @@ gamma_I = 7e-4
 gamma_A = 1e-4
 gamma_Aq = 0.03
 gamma_Iq = 0.05
-chi = 1
-N_e = {"上海": 2.489e7, "湖北": 5.830e7}
+chi = 0
+N_e = {"上海": 2.489e7, "湖北": 5.830e7, "陕西": 3.95e7}
 
 
 """ ===========变量设置==========="""
@@ -76,18 +84,18 @@ x10 = [0, 1]
 x11 = [0, 1]
 x12 = [0, 1]
 
-b1 = [1, 1]  # 第一个决策变量边界，1表示包含范围的边界，0表示不包含
-b2 = [1, 1]
-b3 = [1, 1]
-b4 = [1, 1]
-b5 = [1, 1]
-b6 = [1, 1]
-b7 = [1, 1]
-b8 = [1, 1]
-b9 = [1, 1]
-b10 = [1, 1]
-b11 = [1, 1]
-b12 = [1, 1]
+b1 = [0, 0]  # 第一个决策变量边界，1表示包含范围的边界，0表示不包含
+b2 = [0, 0]
+b3 = [0, 0]
+b4 = [0, 0]
+b5 = [0, 0]
+b6 = [0, 0]
+b7 = [0, 0]
+b8 = [0, 0]
+b9 = [0, 0]
+b10 = [0, 0]
+b11 = [0, 0]
+b12 = [0, 0]
 
 ranges = np.vstack([x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12]).T  # 生成自变量的范围矩阵，使得第一行为所有决策变量的下界，第二行为上界
 borders = np.vstack([b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12]).T  # 生成自变量的边界矩阵
@@ -112,13 +120,13 @@ FieldD = ea.crtfld(Encoding, varTypes, ranges, borders, precisions, codes, scale
 
 """ ===========遗传算法参数设置==========="""
 NIND = 100  # 种群个体数目
-MAXGEN = 600  # 最大遗传代数
+MAXGEN = 800  # 最大遗传代数
 maxormins = np.array([1])  # 1：目标函数最小化，-1：目标函数最大化
 select_style = 'rws'  # 轮盘赌选择
 rec_style = 'xovdp'  # 两点交叉
 mut_style = 'mutbin'  # 二进制染色体的变异算子
 Lind = int(np.sum(FieldD[0, :]))  # 染色体长度
-pc = 0.5  # 交叉概率
+pc = 0.4  # 交叉概率
 pm = 1 / Lind  # 变异概率
 obj_trace = np.zeros((MAXGEN, 2))
 var_trace = np.zeros((MAXGEN, int(Lind)))
@@ -190,6 +198,9 @@ def aim(Phen, CV):
 def write_param(log_file: _io.TextIOWrapper):
     log_file.writelines(region)
     temp_str = "\ninit setting:\n"
+    temp_str += "y0:" + str(y0) + "\n"
+    temp_str += "start date:" + str(start_date) + "\n"
+    temp_str += "end data:" + str(end_date) + "\n"
     temp_str += "rho: " + str(rho) + "\n"
     temp_str += "phi: " + str(phi) + "\n"
     temp_str += "beta: " + str(beta) + "\n"
@@ -210,7 +221,7 @@ def write_param(log_file: _io.TextIOWrapper):
 def draw_result(file_path, log_file_name, region, start_date, end_date, variable):
     y_data = read_file(file_path, region, start_date, end_date)
     days = calc_days(start_date, end_date) - 2
-    y0 = [0, 0, 1, 0, 0, 0, 0, 0]
+    # y0 = [0, 0, 1, 0, 0, 0, 0, 0]
     t = np.linspace(0, days, days + 1)
     sol = odeint(model, y0, t, args=(variable[0, 0], variable[0, 1], variable[0, 2], variable[0, 3], variable[0, 4],
                                      variable[0, 5], variable[0, 6], variable[0, 7], variable[0, 8], variable[0, 9],
@@ -293,7 +304,8 @@ def start_GA(iter_round):
     draw_result(file_path, log_file_name, region, start_date, plot_end_date, variable)
 
 
-for i in range(1, 9):
-    pc = 0.1*i
+for i in range(10):
+    # pc = 0.1*i
     start_GA(i)
+# start_GA(1)
 
